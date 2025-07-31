@@ -11,15 +11,75 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 //access the .env file for the token
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Replace with your bot token
 
+//runs once the bot is ready from successful login to Discord, shows print on console
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
 });
 
-client.on('messageCreate', message => {
-    if (message.author.bot) return;
+/*
+    1. listen for event of discord messages
+    2. event = messageCreate, so a new smessage
+    3. arrow function everytime message is made
+    4. syntax: 
+    content = text content, 
+    author = user who sent it, 
+    channel = channel it was sent in,
+    guild = server it is in 
+*/
+client.on('messageCreate', (message) => {
+    //whether the message comes from bot
+    if (message.author.bot) 
+        return;
 
-    if (message.content === '!ping') {
-        message.channel.send('Pong!');
+    /*
+        1. trim(), removes the whitespace from start & end
+        2. split(), turns string into array with separator
+        3. regex -> /(?:[^\s"]+|"[^"]*")+/g where:
+            /.../ = regex
+
+            ?:... = group regex parts together (structure not for returns)
+                - doesn't save what it matched, or keeps what it saw so we don't need to repeat
+
+            [^\s"]+ = character set [], ^ (not), whitespace, quote(")
+
+            OR ( | )
+
+            "[^"]*" 
+                " = matches a single quote
+                [^"]* = matche zero or more non-quote chars
+                " = ends with quote
+
+            matches with ()+ which means one or more of those two groups w/ g (global match)
+            \g = find all matches not the just the first one for match() 
+
+
+    */
+
+    //results in array of all the matches to this regex, command, args
+    const args = message.content.match(/(?:[^\s"]+|"[^"]*")+/g);
+
+    /*
+        1. shift() removes first item from array & returns
+            - so cmd will always be the command not the arguments
+        2. toLowerCase to make the name of the command lowercase
+            - so it doesn't matter how you type the command (less sensitive)
+    */
+    const cmd = args.shift().toLowerCase();
+
+    /*
+    replace all instances of quotes
+        /.../ = regex
+        " = quote
+        g at end = all instances
+        */
+    const summoner = args[0].replace(/"/g, '');
+
+    if (cmd === '!ss') {
+
+        if(!summoner)
+            message.channel.send('💥 Uh-Oh! Please check your arguments! !ss "SummonerName#TAG"')
+
+        message.channel.send(`The current summoner is: ${summoner}`);
     }
 });
 
