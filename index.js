@@ -1,10 +1,10 @@
 import {getSummonerInfo, getMatchIDs, getMatchStats} from './riot_api.js'
 import { Client, GatewayIntentBits } from 'discord.js';
-
+import dotenv from 'dotenv';
 
 //load the dotenv library so it reads the .env
 //set up the values in process.env
-require('dotenv').config();
+dotenv.config(); 
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 

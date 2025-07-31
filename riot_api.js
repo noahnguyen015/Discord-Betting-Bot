@@ -1,5 +1,6 @@
 export async function getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY){
 
+    //grab summoner information from the RIOT API
     const response = await fetch(`https://${ACCOUNT_REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${SUMMONER_NAME}/${TAGLINE}`,
     {
         headers: {'X-Riot-Token': API_KEY}
