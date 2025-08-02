@@ -11,6 +11,9 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 //access the .env file for the token
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Replace with your bot token
 
+let SUMMONER_NAME = '';
+let TAGLINE = '';
+
 //runs once the bot is ready from successful login to Discord, shows print on console
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -31,55 +34,44 @@ client.on('messageCreate', (message) => {
     if (message.author.bot) 
         return;
 
-    /*
-        1. trim(), removes the whitespace from start & end
-        2. split(), turns string into array with separator
-        3. regex -> /(?:[^\s"]+|"[^"]*")+/g where:
-            /.../ = regex
-
-            ?:... = group regex parts together (structure not for returns)
-                - doesn't save what it matched, or keeps what it saw so we don't need to repeat
-
-            [^\s"]+ = character set [], ^ (not), whitespace, quote(")
-
-            OR ( | )
-
-            "[^"]*" 
-                " = matches a single quote
-                [^"]* = matche zero or more non-quote chars
-                " = ends with quote
-
-            matches with ()+ which means one or more of those two groups w/ g (global match)
-            \g = find all matches not the just the first one for match() 
-
-
-    */
-
-    //results in array of all the matches to this regex, command, args
+    //regex to include characters in between quotes or without quotes or spaces
     const args = message.content.match(/(?:[^\s"]+|"[^"]*")+/g);
 
-    /*
-        1. shift() removes first item from array & returns
-            - so cmd will always be the command not the arguments
-        2. toLowerCase to make the name of the command lowercase
-            - so it doesn't matter how you type the command (less sensitive)
-    */
+    if(args.length <= 1){
+        message.channel.send('💥 Please enter the summoner name with the command $ss "SummonerName#TAG"');
+        return
+    }
+
     const cmd = args.shift().toLowerCase();
 
-    /*
-    replace all instances of quotes
-        /.../ = regex
-        " = quote
-        g at end = all instances
-        */
+    if (!args[0].startsWith('"') || !args[0].endsWith('"')){
+        message.channel.send('💥 Uh-Oh! make sure to quote your summoner name! $ss "SummonerName#TAG"');
+        return
+    }
+
     const summoner = args[0].replace(/"/g, '');
 
-    if (cmd === '!ss') {
+    let count = 0;
 
-        if(!summoner)
-            message.channel.send('💥 Uh-Oh! Please check your arguments! !ss "SummonerName#TAG"')
+    for(let i = 0; i < summoner.length; i++){
+        if(summoner[i] == '#')
+            count++;
+    }
 
-        message.channel.send(`The current summoner is: ${summoner}`);
+    if(count != 1){
+        message.channel.send('💥 Tag Error, please check your tag! $ss "SummonerName#TAG"');
+        return
+    }
+
+    const tagidx = summoner.indexOf('#');
+    SUMMONER_NAME = summoner.slice(0, tagidx).trim();
+    TAGLINE = summoner.slice(tagidx+1).trim();
+
+    if (cmd === '$ss') {
+        message.channel.send(`The current summoner is: ${SUMMONER_NAME} \nThe tag is ${TAGLINE}`);
+        getStats();
+    }else{
+        message.channel.send('💥 Please check the name of the command!');
     }
 });
 
@@ -88,8 +80,6 @@ client.login(DISCORD_TOKEN);
 const API_KEY = process.env.API_KEY;
 const ACCOUNT_REGION = 'americas' //accounts are global, just use any endpoints americas/europe/asia
 const REGION = 'americas' //for game data like matches and stats once you get PUUID which is regions-specific
-const SUMMONER_NAME = 'kraneh'
-const TAGLINE = 'NA1'
 
 
 async function getStats(){
@@ -99,18 +89,18 @@ async function getStats(){
         const summoner_info = await getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY);
 
         const puuid = summoner_info["puuid"];
+
         const count = 5;
 
         const match_ids = await getMatchIDs(REGION, API_KEY, puuid, count);
-
 
         for(let i = 0; i < match_ids.length; i++){
             const match_stats = await getMatchStats(REGION, API_KEY, match_ids[i]);
 
             const participants = match_stats['info']['participants'];
-            const game_type = match_stats['info']['queueId']
+            const game_type = match_stats['info']['queueId'];
 
-            for(let j = 0; j < participants.length; j++)
+            for(let j = 0; j < participants.length; j++){
                 if(participants[j]['riotIdGameName'] === SUMMONER_NAME && participants[j]['riotIdTagline'] === TAGLINE) {
                     console.log(`===============MATCH ${match_ids[i]} SUMMARY===============`)
                     console.log(`GAME TYPE: ${game_type}`);
@@ -120,11 +110,10 @@ async function getStats(){
                     console.log(`Damage Dealt: ${participants[j]['totalDamageDealtToChampions']}`);
                     break;
                 }
+            }
         }
     
     }catch(err){
         console.log(err.message);
     }   
 }
-
-getStats();
