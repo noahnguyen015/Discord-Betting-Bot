@@ -1,3 +1,4 @@
+import { Chart } from 'chart.js';
 import {getSummonerInfo, getMatchIDs, getMatchStats} from './riot_api.js'
 import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, Events } from 'discord.js';
 import dotenv from 'dotenv';
@@ -156,15 +157,28 @@ async function getStats(){
 
         const match_ids = await getMatchIDs(REGION, API_KEY, puuid, count);
 
+        let kills = [];
+        let assists = [];
+        let deaths = [];
+        let gameDay = 0;
+        let gameMonth = 0;
+
         for(let i = 0; i < match_ids.length; i++){
             const match_stats = await getMatchStats(REGION, API_KEY, match_ids[i]);
 
             const participants = match_stats['info']['participants'];
             const game_type = match_stats['info']['queueId'];
 
+
+
             for(let j = 0; j < participants.length; j++){
                 if(participants[j]['riotIdGameName'] === SUMMONER_NAME && participants[j]['riotIdTagline'] === TAGLINE) {
+                    
+                    const participant = participants[j];
 
+                    kills.push(participant['kills']);
+                    deaths.push(participant['deaths']);
+                    assists.push(participant['assists']);
                     /*
                     console.log(`===============MATCH ${match_ids[i]} SUMMARY===============`)
                     console.log(`GAME TYPE: ${game_type}`);
@@ -179,9 +193,24 @@ async function getStats(){
             }
         }
 
-        const embed = [new EmbedBuilder().setTitle('Page 1').setDescription('This is the first page').setColor('Purple'),
-                       new EmbedBuilder().setTitle('Page 2').setDescription('This is the second page').setColor('Purple'),
-                       new EmbedBuilder().setTitle('Page 3').setDescription('This is the third page').setColor('Purple'),
+        console.log(kills);
+        console.log(deaths);
+        console.log(assists);
+
+
+
+        const embed = [new EmbedBuilder()
+                       .setTitle('Page 1')
+                       .setDescription('This is the first page')
+                       .setColor('Purple'),
+                       new EmbedBuilder()
+                       .setTitle('Page 2')
+                       .setDescription('This is the second page')
+                       .setColor('Purple'),
+                       new EmbedBuilder()
+                       .setTitle('Page 3')
+                       .setDescription('This is the third page')
+                       .setColor('Purple'),
                       ]
 
         const [prev, next] = makeButtons(false);
