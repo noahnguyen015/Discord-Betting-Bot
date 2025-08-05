@@ -7,19 +7,20 @@ const limit = new Bottleneck ({resevoir: 18, //max 20 requests
 
 
 export async function getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY){
-
     //grab summoner information from the RIOT API
+
     const response = await fetch(`https://${ACCOUNT_REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${SUMMONER_NAME}/${TAGLINE}`,
     {
         headers: {'X-Riot-Token': API_KEY}
     });
 
-    if(!response.ok) 
-        console.log(`Fetch for summoner info failed :( (${response.status})`);
-
+    if(!response.ok){
+        console.error(`Fetch for summoner info failed, Please check API; Error (${response.status})`);
+    }
     const reply = await response.json();
 
     return reply
+
 }
 
 export async function getMatchIDs(REGION, API_KEY, puuid, count){
@@ -30,8 +31,9 @@ export async function getMatchIDs(REGION, API_KEY, puuid, count){
         headers: {'X-Riot-Token': API_KEY}
     });
 
-    if(!response.ok) 
-        console.log(`Fetch for match Ids failed :( (${response.status})`);
+    if(!response.ok){
+        console.error(`Fetch for match Ids failed; Please check API; Error (${response.status})`);
+    }
 
     const reply = await response.json();
 
@@ -49,8 +51,10 @@ export async function getMatchStats(REGION, API_KEY, match_id){
             headers: {'X-Riot-Token': API_KEY}
         });
 
-        if(!response.ok) 
-            console.log(`Fetch for Match Stats failed :( (${response.status})`);
+        if(!response.ok){
+            console.error(`Fetch for Match Stats failed; Please Check API; Error (${response.status})`);
+            return null
+        }
 
         const reply = await response.json();
         return reply

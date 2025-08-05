@@ -94,59 +94,67 @@ client.on('messageCreate', async (message) => {
 
     //for information (ss = summoner stats)
     if (cmd === '$ss') {
+        try{
+            message.channel.send(`The current summoner is: ${SUMMONER_NAME} \nThe tag is ${TAGLINE}`);
 
-        message.channel.send(`The current summoner is: ${SUMMONER_NAME} \nThe tag is ${TAGLINE}`);
+            //get the buttons and embed pages
+            const pages = await getStats();
 
-        //get the buttons and embed pages
-        const pages = await getStats();
-        let currentPage = 0;
-
-        //build the embedded message
-        //send the pages over starting with first page, and the buttons, then the attachment variables
-        const embed = await message.channel.send({embeds: [pages[0][0]], 
-                                                  components: [pages[1]],
-                                                  files: [pages[2][0]],
-                                                });
-
-        //look for interaction, keep u for 3 minutes
-        const collector = embed.createMessageComponentCollector({time: 240_000});
-
-        //collect interaction
-        collector.on('collect', async (interaction) => {
-
-            //check if next or previous button
-            if(interaction.customId === 'PrevId' && currentPage > 0){
-                currentPage--;
-            }
-            else if(interaction.customId === 'NextId' && currentPage < pages[0].length-1){
-                currentPage++;
-
+            if(!pages){
+                throw new Error('Error has occured; Please check the API');
             }
 
-            //build new clones of buttons
-            const [prev, next] = makeButtons(false);
+            let currentPage = 0;
 
-            //throw into action row
-            const buttons = new ActionRowBuilder().addComponents(prev, next);
+            //build the embedded message
+            //send the pages over starting with first page, and the buttons, then the attachment variables
+            const embed = await message.channel.send({embeds: [pages[0][0]], 
+                                                    components: [pages[1]],
+                                                    files: [pages[2][0]],
+                                                    });
 
-            //update the embed page with the previous or next page
-            await interaction.update({embeds: [pages[0][currentPage]], 
-                                      components: [buttons], 
-                                      files: [pages[2][currentPage]],});
-        });
+            //look for interaction, keep u for 3 minutes
+            const collector = embed.createMessageComponentCollector({time: 240_000});
 
-        //handles the timeout
-        collector.on('end', async () => {
-            //build new clones of buttons
-            const [prev, next] = makeButtons(true);
-            const buttons = new ActionRowBuilder().addComponents(prev, next);
+            //collect interaction
+            collector.on('collect', async (interaction) => {
 
-            await embed.edit({embeds: [pages[0][currentPage]], 
-                              components: [buttons], 
-                              files: [pages[2][currentPage]],});
-        });
+                //check if next or previous button
+                if(interaction.customId === 'PrevId' && currentPage > 0){
+                    currentPage--;
+                }
+                else if(interaction.customId === 'NextId' && currentPage < pages[0].length-1){
+                    currentPage++;
 
-    }else{
+                }
+
+                //build new clones of buttons
+                const [prev, next] = makeButtons(false);
+
+                //throw into action row
+                const buttons = new ActionRowBuilder().addComponents(prev, next);
+
+                //update the embed page with the previous or next page
+                await interaction.update({embeds: [pages[0][currentPage]], 
+                                        components: [buttons], 
+                                        files: [pages[2][currentPage]],});
+            });
+
+            //handles the timeout
+            collector.on('end', async () => {
+                //build new clones of buttons
+                const [prev, next] = makeButtons(true);
+                const buttons = new ActionRowBuilder().addComponents(prev, next);
+
+                await embed.edit({embeds: [pages[0][currentPage]], 
+                                components: [buttons], 
+                                files: [pages[2][currentPage]],});
+            });
+        }catch(error){
+            console.error(`Error Caught: ${error.message}`);
+        }
+    }
+    else{
         message.channel.send('❗ Please check the name of the command!');
     }
 });
@@ -159,115 +167,113 @@ const REGION = 'americas' //for game data like matches and stats once you get PU
 
 
 async function getStats(){
-    try{
+    const summoner_info = await getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY);
 
-        const summoner_info = await getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY);
+    const puuid = summoner_info["puuid"];
 
-        const puuid = summoner_info["puuid"];
+    const count = 56;
 
-        const count = 56;
+    const match_ids = await getMatchIDs(REGION, API_KEY, puuid, count);
 
-        const match_ids = await getMatchIDs(REGION, API_KEY, puuid, count);
+    if(!match_ids || !summoner_info)
+        return null;
 
-        let match_participants = [];
 
-        //list for the stats and dates
-        let kills = [];
-        let assists = [];
-        let deaths = [];
-        let matchDates = [];
+    let match_participants = [];
 
-        //Collect all of the games from the last 
-        for(let i = 0; i < match_ids.length; i++){
-            try {
-                const match_stats = await getMatchStats(REGION, API_KEY, match_ids[i]);
+    //list for the stats and dates
+    let kills = [];
+    let assists = [];
+    let deaths = [];
+    let matchDates = [];
 
-                const participants = match_stats['info']['participants'];
-                const game_type = match_stats['info']['queueId'];
-                const matchDuration = match_stats['info']['gameDuration']; 
+    //Collect all of the games from the last 
+    for(let i = 0; i < match_ids.length; i++){
+        try {
+            const match_stats = await getMatchStats(REGION, API_KEY, match_ids[i]);
 
-                //if the game is normal-draft, ranked solo/duo, ranked flex, and not a remake
-                if((game_type === 400 || game_type === 420 || game_type === 440) && matchDuration > 600){
-                    if(match_participants.length === 5)
-                        break;
-                    else {
-                        //retrieve the actual date of the match
-                        //use the UNIX timestamp in milliseconds
-                        const matchDate = new Date(match_stats['info']['gameStartTimestamp']);
+            const participants = match_stats['info']['participants'];
+            const game_type = match_stats['info']['queueId'];
+            const matchDuration = match_stats['info']['gameDuration']; 
 
-                        const matchDay = matchDate.getDate(); //get the day of match for the graph
-                        const matchMonth = matchDate.getMonth() + 1; //0 indexed for the month of match
-                        matchDates.push({month: matchMonth, day: matchDay,});
-                        match_participants.push(participants);
-                    }
-                }
-
-            }catch(error) {
-                console.error(error.message);
-            }
-        }
-
-        //go through all normal draft, ranked solo/duo, ranked flex
-        for(let i = 0; i < match_participants.length; i++){
-
-            const participants = match_participants[i];
-            //check each match for stats
-            for(let j = 0; j < participants.length; j++){
-                //find the person that was looked up for the data
-                if(participants[j]['riotIdGameName'] === SUMMONER_NAME && participants[j]['riotIdTagline'] === TAGLINE) {
-                    
-                    const participant = participants[j];
-                    kills.push(participant['kills']);
-                    deaths.push(participant['deaths']);
-                    assists.push(participant['assists']);
+            //if the game is normal-draft, ranked solo/duo, ranked flex, and not a remake
+            if((game_type === 400 || game_type === 420 || game_type === 440) && matchDuration > 600){
+                if(match_participants.length === 5)
                     break;
+                else {
+                    //retrieve the actual date of the match
+                    //use the UNIX timestamp in milliseconds
+                    const matchDate = new Date(match_stats['info']['gameStartTimestamp']);
+
+                    const matchDay = matchDate.getDate(); //get the day of match for the graph
+                    const matchMonth = matchDate.getMonth() + 1; //0 indexed for the month of match
+                    matchDates.push({month: matchMonth, day: matchDay,});
+                    match_participants.push(participants);
                 }
             }
+
+        }catch(error) {
+            console.error(error.message);
         }
+    }
 
-        //map of buffers
-        let buffers = {};
+    //go through all normal draft, ranked solo/duo, ranked flex
+    for(let i = 0; i < match_participants.length; i++){
 
-        //returns buffers, add them to the map
-        buffers['killBuffer'] = await graphData(kills, matchDates, 'Kills');
-        buffers['deathBuffer'] = await graphData(deaths, matchDates, 'Deaths');
-        buffers['assistBuffer'] = await graphData(assists, matchDates, 'Assists');
+        const participants = match_participants[i];
+        //check each match for stats
+        for(let j = 0; j < participants.length; j++){
+            //find the person that was looked up for the data
+            if(participants[j]['riotIdGameName'] === SUMMONER_NAME && participants[j]['riotIdTagline'] === TAGLINE) {
+                
+                const participant = participants[j];
+                kills.push(participant['kills']);
+                deaths.push(participant['deaths']);
+                assists.push(participant['assists']);
+                break;
+            }
+        }
+    }
 
-        //create a file attachment (image attachment PNG) 
-        //use buffer to assign to file for the discord embed message and assign name to the file/image for the attachment
-        const k_attachment = new AttachmentBuilder(buffers['killBuffer'], {name: 'kills_graph.png'});
-        const d_attachment = new AttachmentBuilder(buffers['deathBuffer'], {name: 'deaths_graph.png'});
-        const a_attachment = new AttachmentBuilder(buffers['assistBuffer'], {name: 'assists_graph.png'});
+    //map of buffers
+    let buffers = {};
 
-        //build each page
-        //for image, despite variable attachments, every string will be attachment
-        const embed = [new EmbedBuilder()
-                       .setTitle('Kills Per Game')
-                       .setDescription('Kills over the last 5 matches')
-                       .setColor('Purple')
-                       .setImage('attachment://kills_graph.png'),
-                       new EmbedBuilder()
-                       .setTitle('Deaths Per Game')
-                       .setDescription('Deaths over the last 5 matches')
-                       .setColor('Purple')
-                       .setImage('attachment://deaths_graph.png'),
-                       new EmbedBuilder()
-                       .setTitle('Assists Per Game')
-                       .setDescription('Assists over the last 5 matches')
-                       .setColor('Purple')
-                       .setImage('attachment://assists_graph.png'),
-                      ]
-        
-        //buttons for previous and next
-        const [prev, next] = makeButtons(false);
-        
-        //create row for these actions
-        const buttons = new ActionRowBuilder().addComponents(prev, next);
-        
-        //pass array of pages, buttons, and array of attachments
-        return [embed, buttons, [k_attachment, d_attachment, a_attachment]]
+    //returns buffers, add them to the map
+    buffers['killBuffer'] = await graphData(kills, matchDates, 'Kills');
+    buffers['deathBuffer'] = await graphData(deaths, matchDates, 'Deaths');
+    buffers['assistBuffer'] = await graphData(assists, matchDates, 'Assists');
+
+    //create a file attachment (image attachment PNG) 
+    //use buffer to assign to file for the discord embed message and assign name to the file/image for the attachment
+    const k_attachment = new AttachmentBuilder(buffers['killBuffer'], {name: 'kills_graph.png'});
+    const d_attachment = new AttachmentBuilder(buffers['deathBuffer'], {name: 'deaths_graph.png'});
+    const a_attachment = new AttachmentBuilder(buffers['assistBuffer'], {name: 'assists_graph.png'});
+
+    //build each page
+    //for image, despite variable attachments, every string will be attachment
+    const embed = [new EmbedBuilder()
+                    .setTitle('Kills Per Game')
+                    .setDescription('Kills over the last 5 matches')
+                    .setColor('Purple')
+                    .setImage('attachment://kills_graph.png'),
+                    new EmbedBuilder()
+                    .setTitle('Deaths Per Game')
+                    .setDescription('Deaths over the last 5 matches')
+                    .setColor('Purple')
+                    .setImage('attachment://deaths_graph.png'),
+                    new EmbedBuilder()
+                    .setTitle('Assists Per Game')
+                    .setDescription('Assists over the last 5 matches')
+                    .setColor('Purple')
+                    .setImage('attachment://assists_graph.png'),
+                    ]
     
-    }catch(error){
-        console.error(error.message);
-    }   
+    //buttons for previous and next
+    const [prev, next] = makeButtons(false);
+    
+    //create row for these actions
+    const buttons = new ActionRowBuilder().addComponents(prev, next);
+    
+    //pass array of pages, buttons, and array of attachments
+    return [embed, buttons, [k_attachment, d_attachment, a_attachment]]
 }
