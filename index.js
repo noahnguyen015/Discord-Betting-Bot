@@ -1,6 +1,6 @@
-import { Chart } from 'chart.js';
+import { graphData } from './chart.js';
 import {getSummonerInfo, getMatchIDs, getMatchStats} from './riot_api.js'
-import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, Events } from 'discord.js';
+import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, AttachmentBuilder, ButtonStyle, Events } from 'discord.js';
 import dotenv from 'dotenv';
 
 //load the dotenv library so it reads the .env
@@ -15,6 +15,7 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Replace with your bot token
 let SUMMONER_NAME = '';
 let TAGLINE = '';
 
+//isDisabled, on timeout --> the prev and next buttons will pass true so the buttons no longer work
 const makeButtons = (isDisabled) => {
     const button1 = new ButtonBuilder()
         .setCustomId('NextId')
@@ -56,7 +57,7 @@ client.on('messageCreate', async (message) => {
 
     //more than 1 argument check
     if(args.length <= 1){
-        message.channel.send('💥 Please enter the summoner name with the command $ss "SummonerName#TAG"');
+        message.channel.send('❗ Please enter the summoner name with the command $ss "SummonerName#TAG"');
         return
     }
 
@@ -65,7 +66,7 @@ client.on('messageCreate', async (message) => {
 
     //first index after cmd is 1st argument, check for quotes
     if (!args[0].startsWith('"') || !args[0].endsWith('"')){
-        message.channel.send('💥 Uh-Oh! make sure to quote your summoner name! $ss "SummonerName#TAG"');
+        message.channel.send('❗ Uh-Oh! make sure to quote your summoner name! $ss "SummonerName#TAG"');
         return
     }
 
@@ -82,7 +83,7 @@ client.on('messageCreate', async (message) => {
 
     //if more than 1 tag or no tag, raise error
     if(count != 1){
-        message.channel.send('💥 Tag Error, please check your tag! $ss "SummonerName#TAG"');
+        message.channel.send('❗ Tag Error, please check your tag! $ss "SummonerName#TAG"');
         return
     }
 
@@ -100,11 +101,15 @@ client.on('messageCreate', async (message) => {
         const pages = await getStats();
         let currentPage = 0;
 
-        //send the pages over starting with first page, and the buttons
-        const embed = await message.channel.send({embeds: [pages[0][0]], components: [pages[1]]});
+        //build the embedded message
+        //send the pages over starting with first page, and the buttons, then the attachment variables
+        const embed = await message.channel.send({embeds: [pages[0][0]], 
+                                                  components: [pages[1]],
+                                                  files: [pages[2][0]],
+                                                });
 
         //look for interaction, keep u for 3 minutes
-        const collector = embed.createMessageComponentCollector({time: 180_000});
+        const collector = embed.createMessageComponentCollector({time: 60_000});
 
         //collect interaction
         collector.on('collect', async (interaction) => {
@@ -125,16 +130,24 @@ client.on('messageCreate', async (message) => {
             const buttons = new ActionRowBuilder().addComponents(prev, next);
 
             //update the embed page with the previous or next page
-            await interaction.update({embeds: [pages[0][currentPage]], components: [buttons] });
+            await interaction.update({embeds: [pages[0][currentPage]], 
+                                      components: [buttons], 
+                                      files: [pages[2][currentPage]],});
         });
 
         //handles the timeout
         collector.on('end', async () => {
-            await embed.edit({embeds: [pages[0][currentPage]], components: [makeButtons(true)],});
+            //build new clones of buttons
+            const [prev, next] = makeButtons(true);
+            const buttons = new ActionRowBuilder().addComponents(prev, next);
+
+            await embed.edit({embeds: [pages[0][currentPage]], 
+                              components: [buttons], 
+                              files: [pages[2][currentPage]],});
         });
 
     }else{
-        message.channel.send('💥 Please check the name of the command!');
+        message.channel.send('❗ Please check the name of the command!');
     }
 });
 
@@ -160,8 +173,7 @@ async function getStats(){
         let kills = [];
         let assists = [];
         let deaths = [];
-        let gameDay = 0;
-        let gameMonth = 0;
+        let matchDates = [];
 
         for(let i = 0; i < match_ids.length; i++){
             const match_stats = await getMatchStats(REGION, API_KEY, match_ids[i]);
@@ -169,9 +181,16 @@ async function getStats(){
             const participants = match_stats['info']['participants'];
             const game_type = match_stats['info']['queueId'];
 
+            const matchDate = new Date(match_stats['info']['gameStartTimestamp']);
 
+            const matchDay = matchDate.getDate(); //
+            const matchMonth = matchDate.getMonth() + 1; //0 indexed
 
+            matchDates.push({month: matchMonth, day: matchDay,});
+
+            //check each match
             for(let j = 0; j < participants.length; j++){
+                //find the person that was looked up for the data
                 if(participants[j]['riotIdGameName'] === SUMMONER_NAME && participants[j]['riotIdTagline'] === TAGLINE) {
                     
                     const participant = participants[j];
@@ -179,45 +198,53 @@ async function getStats(){
                     kills.push(participant['kills']);
                     deaths.push(participant['deaths']);
                     assists.push(participant['assists']);
-                    /*
-                    console.log(`===============MATCH ${match_ids[i]} SUMMARY===============`)
-                    console.log(`GAME TYPE: ${game_type}`);
-                    console.log(`GAME DURATION: ${match_stats['info']['gameDuration']} WIN?: (${participants[j]['win']})`);
-                    console.log(`SUMMONER: ${participants[j]['riotIdGameName']}#${participants[j]['riotIdTagline']}`); 
-                    console.log(`KDA: ${participants[j]['kills']}/${participants[j]['deaths']}/${participants[j]['assists']}`);
-                    console.log(`Damage Dealt: ${participants[j]['totalDamageDealtToChampions']}`);
-                    */
 
                     break;
                 }
             }
         }
 
-        console.log(kills);
-        console.log(deaths);
-        console.log(assists);
+        //map of buffers
+        let buffers = {};
 
+        //returns buffers, add them to the map
+        buffers['killBuffer'] = await graphData(kills, matchDates, 'Kills');
+        buffers['deathBuffer'] = await graphData(deaths, matchDates, 'Deaths');
+        buffers['assistBuffer'] = await graphData(assists, matchDates, 'Assists');
 
+        //create a file attachment (image attachment PNG) 
+        //use buffer to assign to file for the discord embed message and assign name to the file/image for the attachment
+        const k_attachment = new AttachmentBuilder(buffers['killBuffer'], {name: 'kills_graph.png'});
+        const d_attachment = new AttachmentBuilder(buffers['deathBuffer'], {name: 'deaths_graph.png'});
+        const a_attachment = new AttachmentBuilder(buffers['assistBuffer'], {name: 'assists_graph.png'});
 
+        //build each page
+        //for image, despite variable attachments, every string will be attachment
         const embed = [new EmbedBuilder()
-                       .setTitle('Page 1')
-                       .setDescription('This is the first page')
-                       .setColor('Purple'),
+                       .setTitle('Kills Per Game')
+                       .setDescription('Kills over the last 5 matches')
+                       .setColor('Purple')
+                       .setImage('attachment://kills_graph.png'),
                        new EmbedBuilder()
-                       .setTitle('Page 2')
-                       .setDescription('This is the second page')
-                       .setColor('Purple'),
+                       .setTitle('Deaths Per Game')
+                       .setDescription('Deaths over the last 5 matches')
+                       .setColor('Purple')
+                       .setImage('attachment://deaths_graph.png'),
                        new EmbedBuilder()
-                       .setTitle('Page 3')
-                       .setDescription('This is the third page')
-                       .setColor('Purple'),
+                       .setTitle('Assists Per Game')
+                       .setDescription('Assists over the last 5 matches')
+                       .setColor('Purple')
+                       .setImage('attachment://assists_graph.png'),
                       ]
-
+        
+        //buttons for previous and next
         const [prev, next] = makeButtons(false);
-
+        
+        //create row for these actions
         const buttons = new ActionRowBuilder().addComponents(prev, next);
-
-        return [embed, buttons]
+        
+        //pass array of pages, buttons, and array of attachments
+        return [embed, buttons, [k_attachment, d_attachment, a_attachment]]
     
     }catch(err){
         console.log(err.message);
