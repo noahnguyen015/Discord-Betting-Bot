@@ -109,7 +109,7 @@ client.on('messageCreate', async (message) => {
                                                 });
 
         //look for interaction, keep u for 3 minutes
-        const collector = embed.createMessageComponentCollector({time: 60_000});
+        const collector = embed.createMessageComponentCollector({time: 240_000});
 
         //collect interaction
         collector.on('collect', async (interaction) => {
@@ -170,6 +170,7 @@ async function getStats(){
 
         const match_ids = await getMatchIDs(REGION, API_KEY, puuid, count);
 
+        //list for the stats and dates
         let kills = [];
         let assists = [];
         let deaths = [];
@@ -180,7 +181,6 @@ async function getStats(){
 
             const participants = match_stats['info']['participants'];
             const game_type = match_stats['info']['queueId'];
-
             const matchDate = new Date(match_stats['info']['gameStartTimestamp']);
 
             const matchDay = matchDate.getDate(); //
@@ -194,7 +194,6 @@ async function getStats(){
                 if(participants[j]['riotIdGameName'] === SUMMONER_NAME && participants[j]['riotIdTagline'] === TAGLINE) {
                     
                     const participant = participants[j];
-
                     kills.push(participant['kills']);
                     deaths.push(participant['deaths']);
                     assists.push(participant['assists']);
