@@ -1,3 +1,11 @@
+import Bottleneck from 'bottleneck'
+
+//Bottleneck settings
+const limit = new Bottleneck ({resevoir: 18, //max 20 requests
+                                resevoirRefreshAmount: 18, //the amount of refills (how many requests to add when refreshes)
+                                reservoirRefreshInterval: 1000 })//every 1 second (how long till full refill)
+
+
 export async function getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY){
 
     //grab summoner information from the RIOT API
@@ -32,15 +40,22 @@ export async function getMatchIDs(REGION, API_KEY, puuid, count){
 
 export async function getMatchStats(REGION, API_KEY, match_id){
 
-    //Fetch the stats of the match from the match_id
-    const response = await fetch(`https://${REGION}.api.riotgames.com/lol/match/v5/matches/${match_id}`,
-    {
-        headers: {'X-Riot-Token': API_KEY}
-    });
+    //schedule the bottleneck based on rate limit
+    //queues the reply if the api is at the limit
+    return limit.schedule(async () => {
+        //Fetch the stats of the match from the match_id
+        const response = await fetch(`https://${REGION}.api.riotgames.com/lol/match/v5/matches/${match_id}`,
+        {
+            headers: {'X-Riot-Token': API_KEY}
+        });
 
-    if(!response.ok) 
-        console.log(`Fetch for Match Stats failed :( (${response.status})`);
+        if(!response.ok) 
+            console.log(`Fetch for Match Stats failed :( (${response.status})`);
 
-    const reply = await response.json();
-    return reply
+        const reply = await response.json();
+        return reply
+    }
+    );
+
+
 }

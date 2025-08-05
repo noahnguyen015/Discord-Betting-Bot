@@ -1,4 +1,4 @@
-import { graphData } from './chart.js';
+import {graphData } from './chart.js';
 import {getSummonerInfo, getMatchIDs, getMatchStats} from './riot_api.js'
 import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, AttachmentBuilder, ButtonStyle, Events } from 'discord.js';
 import dotenv from 'dotenv';
@@ -159,16 +159,17 @@ const REGION = 'americas' //for game data like matches and stats once you get PU
 
 
 async function getStats(){
-
     try{
 
         const summoner_info = await getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY);
 
         const puuid = summoner_info["puuid"];
 
-        const count = 5;
+        const count = 56;
 
         const match_ids = await getMatchIDs(REGION, API_KEY, puuid, count);
+
+        let match_participants = [];
 
         //list for the stats and dates
         let kills = [];
@@ -176,19 +177,41 @@ async function getStats(){
         let deaths = [];
         let matchDates = [];
 
+        //Collect all of the games from the last 
         for(let i = 0; i < match_ids.length; i++){
-            const match_stats = await getMatchStats(REGION, API_KEY, match_ids[i]);
+            try {
+                const match_stats = await getMatchStats(REGION, API_KEY, match_ids[i]);
 
-            const participants = match_stats['info']['participants'];
-            const game_type = match_stats['info']['queueId'];
-            const matchDate = new Date(match_stats['info']['gameStartTimestamp']);
+                const participants = match_stats['info']['participants'];
+                const game_type = match_stats['info']['queueId'];
+                const matchDuration = match_stats['info']['gameDuration']; 
 
-            const matchDay = matchDate.getDate(); //
-            const matchMonth = matchDate.getMonth() + 1; //0 indexed
+                //if the game is normal-draft, ranked solo/duo, ranked flex, and not a remake
+                if((game_type === 400 || game_type === 420 || game_type === 440) && matchDuration > 600){
+                    if(match_participants.length === 5)
+                        break;
+                    else {
+                        //retrieve the actual date of the match
+                        //use the UNIX timestamp in milliseconds
+                        const matchDate = new Date(match_stats['info']['gameStartTimestamp']);
 
-            matchDates.push({month: matchMonth, day: matchDay,});
+                        const matchDay = matchDate.getDate(); //get the day of match for the graph
+                        const matchMonth = matchDate.getMonth() + 1; //0 indexed for the month of match
+                        matchDates.push({month: matchMonth, day: matchDay,});
+                        match_participants.push(participants);
+                    }
+                }
 
-            //check each match
+            }catch(error) {
+                console.error(error.message);
+            }
+        }
+
+        //go through all normal draft, ranked solo/duo, ranked flex
+        for(let i = 0; i < match_participants.length; i++){
+
+            const participants = match_participants[i];
+            //check each match for stats
             for(let j = 0; j < participants.length; j++){
                 //find the person that was looked up for the data
                 if(participants[j]['riotIdGameName'] === SUMMONER_NAME && participants[j]['riotIdTagline'] === TAGLINE) {
@@ -197,7 +220,6 @@ async function getStats(){
                     kills.push(participant['kills']);
                     deaths.push(participant['deaths']);
                     assists.push(participant['assists']);
-
                     break;
                 }
             }
@@ -245,7 +267,7 @@ async function getStats(){
         //pass array of pages, buttons, and array of attachments
         return [embed, buttons, [k_attachment, d_attachment, a_attachment]]
     
-    }catch(err){
-        console.log(err.message);
+    }catch(error){
+        console.error(error.message);
     }   
 }
