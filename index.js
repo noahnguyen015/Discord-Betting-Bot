@@ -1,6 +1,6 @@
 import {graphData } from './chart.js';
 import {getSummonerInfo, getMatchIDs, getMatchStats} from './riot_api.js'
-import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, AttachmentBuilder, ButtonStyle, Events } from 'discord.js';
+import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, AttachmentBuilder, ButtonStyle, Events, CommandInteractionOptionResolver } from 'discord.js';
 import dotenv from 'dotenv';
 
 //load the dotenv library so it reads the .env
@@ -16,20 +16,42 @@ let SUMMONER_NAME = '';
 let TAGLINE = '';
 
 //isDisabled, on timeout --> the prev and next buttons will pass true so the buttons no longer work
-const makeButtons = (isDisabled) => {
+const makeButtons = (isDisabled, pageNum) => {
+
+    let disablePrev = true;
+    let disableNext = true;
+
+    if(!isDisabled){
+        if(pageNum == 0){
+            disablePrev = true;
+            disableNext = false;
+        }
+        else if(pageNum < 2){
+            disablePrev = false;
+            disableNext = false;
+        }
+        else if(pageNum == 2){
+            disablePrev = false;
+            disableNext = true;
+        }
+        else {
+            console.error('Incorrect Page Index Error; Unable to create buttons')
+        }
+    }
+
     const button1 = new ButtonBuilder()
-        .setCustomId('NextId')
-        .setLabel('Next')
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(isDisabled);
-    
-    const button2 = new ButtonBuilder()
         .setCustomId('PrevId')
         .setLabel('Prev')
         .setStyle(ButtonStyle.Primary)
-        .setDisabled(isDisabled);
+        .setDisabled(disablePrev);
 
-    return [button2, button1]
+    const button2 = new ButtonBuilder()
+        .setCustomId('NextId')
+        .setLabel('Next')
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(disableNext);
+
+    return [button1, button2]
 }
 
 //runs once the bot is ready from successful login to Discord, shows print on console
@@ -101,7 +123,8 @@ client.on('messageCreate', async (message) => {
             const pages = await getStats();
 
             if(!pages){
-                throw new Error('Error has occured; Please check the API');
+                message.channel.send('❌ Insufficient Number of Matches Found. Has this user played enough games?"');
+                throw new Error('Error has occured; Insufficient or Unretrievable data');
             }
 
             let currentPage = 0;
@@ -113,23 +136,22 @@ client.on('messageCreate', async (message) => {
                                                     files: [pages[2][0]],
                                                     });
 
-            //look for interaction, keep u for 3 minutes
+            //look for interaction, keep u for 4 minutes 240__000 means 240 seconds
             const collector = embed.createMessageComponentCollector({time: 240_000});
 
             //collect interaction
             collector.on('collect', async (interaction) => {
 
-                //check if next or previous button
+                //check if the pressed button was the next or previous button
                 if(interaction.customId === 'PrevId' && currentPage > 0){
                     currentPage--;
                 }
                 else if(interaction.customId === 'NextId' && currentPage < pages[0].length-1){
                     currentPage++;
-
                 }
 
-                //build new clones of buttons
-                const [prev, next] = makeButtons(false);
+                //build new clones of buttons where false = not expired, currentPage for correct buttons
+                const [prev, next] = makeButtons(false,currentPage);
 
                 //throw into action row
                 const buttons = new ActionRowBuilder().addComponents(prev, next);
@@ -143,7 +165,7 @@ client.on('messageCreate', async (message) => {
             //handles the timeout
             collector.on('end', async () => {
                 //build new clones of buttons
-                const [prev, next] = makeButtons(true);
+                const [prev, next] = makeButtons(true,currentPage);
                 const buttons = new ActionRowBuilder().addComponents(prev, next);
 
                 await embed.edit({embeds: [pages[0][currentPage]], 
@@ -175,16 +197,13 @@ async function getStats(){
 
     const match_ids = await getMatchIDs(REGION, API_KEY, puuid, count);
 
-    if(!match_ids || !summoner_info)
-        return null;
-
-
     let match_participants = [];
 
     //list for the stats and dates
     let kills = [];
     let assists = [];
     let deaths = [];
+    let champions = [];
     let matchDates = [];
 
     //Collect all of the games from the last 
@@ -204,7 +223,6 @@ async function getStats(){
                     //retrieve the actual date of the match
                     //use the UNIX timestamp in milliseconds
                     const matchDate = new Date(match_stats['info']['gameStartTimestamp']);
-
                     const matchDay = matchDate.getDate(); //get the day of match for the graph
                     const matchMonth = matchDate.getMonth() + 1; //0 indexed for the month of match
                     matchDates.push({month: matchMonth, day: matchDay,});
@@ -217,6 +235,11 @@ async function getStats(){
         }
     }
 
+    //If 5 matches aren't found, return insufficient data
+    if(match_participants.length !== 5){
+        return null;
+    }
+
     //go through all normal draft, ranked solo/duo, ranked flex
     for(let i = 0; i < match_participants.length; i++){
 
@@ -225,8 +248,8 @@ async function getStats(){
         for(let j = 0; j < participants.length; j++){
             //find the person that was looked up for the data
             if(participants[j]['riotIdGameName'] === SUMMONER_NAME && participants[j]['riotIdTagline'] === TAGLINE) {
-                
                 const participant = participants[j];
+                champions.push(participant['championName']);
                 kills.push(participant['kills']);
                 deaths.push(participant['deaths']);
                 assists.push(participant['assists']);
@@ -235,10 +258,17 @@ async function getStats(){
         }
     }
 
+    let descriptions = [];
+
+    for(let i = 0; i < match_participants.length; i++){
+        descriptions.push(generateDescription(kills[i], deaths[i], assists[i], matchDates[i], champions[i]));
+    }
+
+
     //map of buffers
     let buffers = {};
 
-    //returns buffers, add them to the map
+    //returns buffers of the graphs, add them to a map
     buffers['killBuffer'] = await graphData(kills, matchDates, 'Kills');
     buffers['deathBuffer'] = await graphData(deaths, matchDates, 'Deaths');
     buffers['assistBuffer'] = await graphData(assists, matchDates, 'Assists');
@@ -253,27 +283,48 @@ async function getStats(){
     //for image, despite variable attachments, every string will be attachment
     const embed = [new EmbedBuilder()
                     .setTitle('Kills Per Game')
-                    .setDescription('Kills over the last 5 matches')
+                    .setDescription(`${descriptions[0]}
+                                     ${descriptions[1]}
+                                     ${descriptions[2]}
+                                     ${descriptions[3]}
+                                     ${descriptions[4]}
+                                     \nKills Over the Last 5 Matches`)
                     .setColor('Purple')
                     .setImage('attachment://kills_graph.png'),
                     new EmbedBuilder()
                     .setTitle('Deaths Per Game')
-                    .setDescription('Deaths over the last 5 matches')
+                    .setDescription(`${descriptions[0]}
+                                     ${descriptions[1]}
+                                     ${descriptions[2]}
+                                     ${descriptions[3]}
+                                     ${descriptions[4]}
+                                     \nDeaths Over the Last 5 Matches`)
                     .setColor('Purple')
                     .setImage('attachment://deaths_graph.png'),
                     new EmbedBuilder()
                     .setTitle('Assists Per Game')
-                    .setDescription('Assists over the last 5 matches')
+                    .setDescription(`${descriptions[0]}
+                                     ${descriptions[1]}
+                                     ${descriptions[2]}
+                                     ${descriptions[3]}
+                                     ${descriptions[4]}
+                                     \nAssists Over the Last 5 Matches`)
                     .setColor('Purple')
                     .setImage('attachment://assists_graph.png'),
                     ]
     
     //buttons for previous and next
-    const [prev, next] = makeButtons(false);
+    const [prev, next] = makeButtons(false, 0);
     
     //create row for these actions
     const buttons = new ActionRowBuilder().addComponents(prev, next);
     
     //pass array of pages, buttons, and array of attachments
     return [embed, buttons, [k_attachment, d_attachment, a_attachment]]
+}
+
+function generateDescription(kills, deaths, assists, matchDates, championName){
+
+    return `${matchDates['month']}/${matchDates['day']} ${championName}: ${kills}/${deaths}/${assists}`
+
 }
