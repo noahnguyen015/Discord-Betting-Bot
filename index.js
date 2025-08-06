@@ -249,7 +249,13 @@ async function getStats(){
             //find the person that was looked up for the data
             if(participants[j]['riotIdGameName'] === SUMMONER_NAME && participants[j]['riotIdTagline'] === TAGLINE) {
                 const participant = participants[j];
-                champions.push(participant['championName']);
+                let role = participant['teamPosition'];
+
+                //name in API for support is UTILITY, change to support for display
+                if(participant['teamPosition'] === 'UTILITY')
+                    role = 'SUPPORT';
+
+                champions.push({champ: participant['championName'], role: role});
                 kills.push(participant['kills']);
                 deaths.push(participant['deaths']);
                 assists.push(participant['assists']);
@@ -323,8 +329,8 @@ async function getStats(){
     return [embed, buttons, [k_attachment, d_attachment, a_attachment]]
 }
 
-function generateDescription(kills, deaths, assists, matchDates, championName){
+function generateDescription(kills, deaths, assists, matchDate, champion){
 
-    return `${matchDates['month']}/${matchDates['day']} ${championName}: ${kills}/${deaths}/${assists}`
+    return `${matchDate['month']}/${matchDate['day']} ${champion["champ"]} (${champion["role"]}): ${kills}/${deaths}/${assists}`
 
 }
