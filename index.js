@@ -2,6 +2,8 @@ import {graphData } from './chart.js';
 import {getSummonerInfo, getMatchIDs, getMatchStats} from './riot_api.js'
 import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, AttachmentBuilder, ButtonStyle, Events, CommandInteractionOptionResolver } from 'discord.js';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 //load the dotenv library so it reads the .env
 //set up the values in process.env
@@ -133,7 +135,7 @@ client.on('messageCreate', async (message) => {
             //send the pages over starting with first page, and the buttons, then the attachment variables
             const embed = await message.channel.send({embeds: [pages[0][0]], 
                                                     components: [pages[1]],
-                                                    files: [pages[2][0]],
+                                                    files: (pages.length > 3)? [pages[2][0], pages[3]] : [pages[2][0]],
                                                     });
 
             //look for interaction, keep u for 4 minutes 240__000 means 240 seconds
@@ -159,7 +161,7 @@ client.on('messageCreate', async (message) => {
                 //update the embed page with the previous or next page
                 await interaction.update({embeds: [pages[0][currentPage]], 
                                         components: [buttons], 
-                                        files: [pages[2][currentPage]],});
+                                        files: (pages.length > 3)? [pages[2][currentPage], pages[3]]: [pages[2][currentPage]],});
             });
 
             //handles the timeout
@@ -170,7 +172,7 @@ client.on('messageCreate', async (message) => {
 
                 await embed.edit({embeds: [pages[0][currentPage]], 
                                 components: [buttons], 
-                                files: [pages[2][currentPage]],});
+                                files: (pages.length > 3)? [pages[2][currentPage], pages[3]]: [pages[2][currentPage]],});
             });
         }catch(error){
             console.error(`Error Caught: ${error.message}`);
@@ -265,7 +267,8 @@ async function getStats(){
     }
 
     let descriptions = [];
-
+    
+    //create the stat descriptions of the last 5 matches
     for(let i = 0; i < match_participants.length; i++){
         descriptions.push(generateDescription(kills[i], deaths[i], assists[i], matchDates[i], champions[i]));
     }
@@ -285,9 +288,8 @@ async function getStats(){
     const d_attachment = new AttachmentBuilder(buffers['deathBuffer'], {name: 'deaths_graph.png'});
     const a_attachment = new AttachmentBuilder(buffers['assistBuffer'], {name: 'assists_graph.png'});
 
-    //build each page
-    //for image, despite variable attachments, every string will be attachment
-    const embed = [new EmbedBuilder()
+    //pages for each of the stats presented:
+    const embed1 = new EmbedBuilder()
                     .setTitle('Kills Per Game')
                     .setDescription(`${descriptions[0]}
                                      ${descriptions[1]}
@@ -296,8 +298,9 @@ async function getStats(){
                                      ${descriptions[4]}
                                      \nKills Over the Last 5 Matches`)
                     .setColor('Purple')
-                    .setImage('attachment://kills_graph.png'),
-                    new EmbedBuilder()
+                    .setImage('attachment://kills_graph.png');
+
+    const embed2 = new EmbedBuilder()
                     .setTitle('Deaths Per Game')
                     .setDescription(`${descriptions[0]}
                                      ${descriptions[1]}
@@ -306,8 +309,9 @@ async function getStats(){
                                      ${descriptions[4]}
                                      \nDeaths Over the Last 5 Matches`)
                     .setColor('Purple')
-                    .setImage('attachment://deaths_graph.png'),
-                    new EmbedBuilder()
+                    .setImage('attachment://deaths_graph.png')
+
+    const embed3 = new EmbedBuilder()
                     .setTitle('Assists Per Game')
                     .setDescription(`${descriptions[0]}
                                      ${descriptions[1]}
@@ -316,8 +320,57 @@ async function getStats(){
                                      ${descriptions[4]}
                                      \nAssists Over the Last 5 Matches`)
                     .setColor('Purple')
-                    .setImage('attachment://assists_graph.png'),
-                    ]
+                    .setImage('attachment://assists_graph.png')
+    
+    //Check if easter egg thumbnail is active
+    let hasThumbnail = false;
+    let thumbnailAttachment = null;
+    
+    //check for specific lookups
+    if((SUMMONER_NAME === 'winter' && TAGLINE === 'liar') || 
+       (SUMMONER_NAME === 'Quandale Dingle' && TAGLINE === 'CHIMP') || 
+       (SUMMONER_NAME === 'Pandaras Box' && TAGLINE === 'Oreo'))
+    {
+        hasThumbnail = true;
+
+        //convert the module url to a usable file path instead of being from file:///
+        //because filename & dirname not in ES6 modules
+        const __filename = fileURLToPath(import.meta.url);
+        //removes the currentfile for the actual directory path
+        const __dirname = path.dirname(__filename);
+
+        if(SUMMONER_NAME === 'winter' && TAGLINE === 'liar'){
+            //path.join builds a file path that works for every system
+            const imagePath = path.join(__dirname, 'assets', 'danny_icon.JPG');
+            embed1.setThumbnail(`attachment://danny_icon.JPG`);
+            embed2.setThumbnail(`attachment://danny_icon.JPG`);
+            embed3.setThumbnail(`attachment://danny_icon.JPG`);
+
+            //create attachment for embed of the image
+            thumbnailAttachment = new AttachmentBuilder(imagePath);
+
+        }
+        else if(SUMMONER_NAME === 'Quandale Dingle' && TAGLINE === 'CHIMP'){
+            const imagePath = path.join(__dirname, 'assets', 'jordan_icon.JPG');
+            embed1.setThumbnail(`attachment://jordan_icon.JPG`);
+            embed2.setThumbnail(`attachment://jordan_icon.JPG`);
+            embed3.setThumbnail(`attachment://jordan_icon.JPG`);
+
+            thumbnailAttachment = new AttachmentBuilder(imagePath);
+        }
+        else if(SUMMONER_NAME === 'Pandaras Box' && TAGLINE === 'Oreo'){
+            const imagePath = path.join(__dirname, 'assets', 'johnny_icon.JPG');
+            embed1.setThumbnail(`attachment://johnny_icon.JPG`);
+            embed2.setThumbnail(`attachment://johnny_icon.JPG`);
+            embed3.setThumbnail(`attachment://johnny_icon.JPG`);
+
+            thumbnailAttachment = new AttachmentBuilder(imagePath);
+        }
+    }
+
+    //build each page
+    //for image, despite variable attachments, every string will be attachment
+    const embed = [embed1,embed2,embed3,];
     
     //buttons for previous and next
     const [prev, next] = makeButtons(false, 0);
@@ -326,6 +379,10 @@ async function getStats(){
     const buttons = new ActionRowBuilder().addComponents(prev, next);
     
     //pass array of pages, buttons, and array of attachments
+    //Check for easter egg
+    if(hasThumbnail)
+        return [embed, buttons, [k_attachment, d_attachment, a_attachment], thumbnailAttachment]
+
     return [embed, buttons, [k_attachment, d_attachment, a_attachment]]
 }
 
