@@ -1,5 +1,6 @@
-import {graphData } from './chart.js';
-import {getSummonerInfo, getMatchIDs, getMatchStats} from './riot_api.js'
+import { graphData } from './chart.js';
+import { getSummonerInfo, getMatchIDs, getMatchStats, } from './riot_api.js'
+import { verifyUser, getWallet, addWallet, subWallet } from './wallet.js'
 import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, AttachmentBuilder, ButtonStyle, Events, CommandInteractionOptionResolver } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -63,7 +64,7 @@ client.once('ready', () => {
 
 /*
     1. listen for event of discord messages
-    2. event = messageCreate, so a new smessage
+    2. event = messageCreate, so a new message
     3. arrow function everytime message is made
     4. syntax: 
     content = text content, 
@@ -195,7 +196,7 @@ async function getStats(){
 
     const puuid = summoner_info["puuid"];
 
-    const count = 56;
+    const count = 51;
 
     const match_ids = await getMatchIDs(REGION, API_KEY, puuid, count);
 
@@ -389,5 +390,4 @@ async function getStats(){
 function generateDescription(kills, deaths, assists, matchDate, champion){
 
     return `${matchDate['month']}/${matchDate['day']} ${champion["champ"]} (${champion["role"]}): ${kills}/${deaths}/${assists}`
-
 }

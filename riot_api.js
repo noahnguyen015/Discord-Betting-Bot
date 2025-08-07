@@ -1,8 +1,8 @@
 import Bottleneck from 'bottleneck'
 
 //Bottleneck settings
-const limit = new Bottleneck ({resevoir: 18, //max 20 requests
-                                resevoirRefreshAmount: 18, //the amount of refills (how many requests to add when refreshes)
+const limit = new Bottleneck ({resevoir: 17, //max 20 requests
+                                resevoirRefreshAmount: 17, //the amount of refills (how many requests to add when refreshes)
                                 reservoirRefreshInterval: 1000 })//every 1 second (how long till full refill)
 
 
@@ -59,6 +59,4 @@ export async function getMatchStats(REGION, API_KEY, match_id){
         return reply
     }
     );
-
-
 }
