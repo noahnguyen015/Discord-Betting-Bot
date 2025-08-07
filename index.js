@@ -1,6 +1,6 @@
-import { graphData } from './chart.js';
-import { getSummonerInfo, getMatchIDs, getMatchStats, } from './riot_api.js'
-import { makeButtons, getLOLStats, generateDescription} from './stats.js'
+import { graphLOLData } from './chart.js';
+import { getSummonerInfo, getLOLMatchIDs, getLOLMatchStats, getTFTMatchIDs, getTFTMatchStats } from './riot_api.js'
+import { makeButtons, getLOLStats, getTFTStats, generateLOLDescription} from './stats.js'
 import { verifyUser, getWallet, addWallet, subWallet } from './wallet.js'
 import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, AttachmentBuilder, ButtonStyle, Events, CommandInteractionOptionResolver } from 'discord.js';
 import dotenv from 'dotenv';
@@ -185,19 +185,15 @@ client.on('messageCreate', async (message) => {
             message.channel.send(`The current summoner is: ${SUMMONER_NAME} \nThe tag is ${TAGLINE}`);
 
             //get the buttons and embed pages
-            const pages = '';
+            const pages = await getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY);
 
             if(!pages){
                 message.channel.send('❌ Insufficient Number of Matches Found. Has this user played enough games?"');
                 throw new Error('Error has occured; Insufficient or Unretrievable data');
             }
 
-            //build the embedded message
-            //send the pages over starting with first page, and the buttons, then the attachment variables
-            const embed = await message.channel.send({embeds: [pages[0]], 
-                                                    components: [pages[1]],
-                                                    files: [pages[0]],
-                                                    });
+            const embed = await message.channel.send({embeds: [pages[0]],
+                                                      files: (pages.length > 2)? [pages[1], pages[2]]: [pages[1]]});
 
             //look for interaction, keep u for 4 minutes 240__000 means 240 seconds
             const collector = embed.createMessageComponentCollector({time: 240_000});

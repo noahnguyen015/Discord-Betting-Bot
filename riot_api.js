@@ -1,5 +1,9 @@
 import Bottleneck from 'bottleneck'
 
+//Flow of League API = getSummonerInfo --> getLOLMatchIDs --> getLOLMatchStats
+//Flow of TFT API = getSummonerInfo --> getTFTMatchIDs --> getTFTMatchStats
+
+
 //Bottleneck settings
 const limit = new Bottleneck ({resevoir: 17, //max 20 requests
                                 resevoirRefreshAmount: 17, //the amount of refills (how many requests to add when refreshes)
@@ -23,7 +27,7 @@ export async function getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, AP
 
 }
 
-export async function getMatchIDs(REGION, API_KEY, puuid, count){
+export async function getLOLMatchIDs(REGION, API_KEY, puuid, count){
 
     //match id fetch for the last 5 matches
     const response = await fetch(`https://${REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=${count}`,
@@ -40,7 +44,7 @@ export async function getMatchIDs(REGION, API_KEY, puuid, count){
     return reply
 }
 
-export async function getMatchStats(REGION, API_KEY, match_id){
+export async function getLOLMatchStats(REGION, API_KEY, match_id){
 
     //schedule the bottleneck based on rate limit
     //queues the reply if the api is at the limit
@@ -59,4 +63,38 @@ export async function getMatchStats(REGION, API_KEY, match_id){
         return reply
     }
     );
+}
+
+export async function getTFTMatchIDs(REGION, API_KEY, puuid, count){
+
+    //match id fetch for the last 5 matches
+    const response = await fetch(`https://${REGION}.api.riotgames.com/tft/match/v1/matches/by-puuid/${puuid}/ids?start=0&count=${count}`,
+    {
+        headers: {'X-Riot-Token': API_KEY}
+    });
+
+    if(!response.ok){
+        console.error(`Fetch for match Ids failed; Please check API; Error (${response.status})`);
+    }
+
+    const reply = await response.json();
+
+    return reply
+}
+
+export async function getTFTMatchStats(REGION, API_KEY, match_id){
+
+    //match id fetch for the last 5 matches
+    const response = await fetch(`https://${REGION}.api.riotgames.com/tft/match/v1/matches/${match_id}`,
+    {
+        headers: {'X-Riot-Token': API_KEY}
+    });
+
+    if(!response.ok){
+        console.error(`Fetch for match Ids failed; Please check API; Error (${response.status})`);
+    }
+
+    const reply = await response.json();
+
+    return reply
 }
