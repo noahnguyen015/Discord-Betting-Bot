@@ -1,6 +1,6 @@
 import { graphLOLData } from './chart.js';
 import { getSummonerInfo, getLOLMatchIDs, getLOLMatchStats, getTFTMatchIDs, getTFTMatchStats } from './riot_api.js'
-import { makeButtons, getLOLStats, getTFTStats, generateLOLDescription} from './stats.js'
+import { makeButtons, getLOLStats, getTFTStats, generateLOLDescription, betButton} from './stats.js'
 import { verifyUser, getWallet, addWallet, subWallet } from './wallet.js'
 import { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, AttachmentBuilder, ButtonStyle, Events, CommandInteractionOptionResolver } from 'discord.js';
 import dotenv from 'dotenv';
@@ -41,6 +41,8 @@ client.on('messageCreate', async (message) => {
     //whether the message comes from bot
     if (message.author.bot) 
         return;
+
+    const userID = message.author.id;
 
     //regex to include characters in between quotes or without quotes or spaces
     const args = message.content.match(/(?:[^\s"]+|"[^"]*")+/g);
@@ -89,7 +91,7 @@ client.on('messageCreate', async (message) => {
             message.channel.send(`The current summoner is: ${SUMMONER_NAME} \nThe tag is ${TAGLINE}`);
 
             //get the buttons and embed pages
-            const pages = await getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY);
+            const pages = await getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY, userID);
 
             if(!pages){
                 message.channel.send('❌ Insufficient Number of Matches Found. Has this user played enough games?"');
@@ -100,6 +102,7 @@ client.on('messageCreate', async (message) => {
 
             //build the embedded message
             //send the pages over starting with first page, and the buttons, then the attachment variables
+            //check the length > 3? means easter egg is there, if not then just use the graph, else use the thumbnail
             const embed = await message.channel.send({embeds: [pages[0][0]], 
                                                     components: [pages[1]],
                                                     files: (pages.length > 3)? [pages[2][0], pages[3]] : [pages[2][0]],
@@ -111,37 +114,76 @@ client.on('messageCreate', async (message) => {
             //collect interaction
             collector.on('collect', async (interaction) => {
 
-                //check if the pressed button was the next or previous button
-                if(interaction.customId === 'PrevId' && currentPage > 0){
-                    currentPage--;
+                //make sure the person that made the button can interact with it
+                if(interaction.customId === `PrevId+${interaction.user.id}` || interaction.customId === `NextId+${interaction.user.id}`) {
+                    //check if the pressed button was the next or previous button and if the user is correct
+                    if(interaction.customId === `PrevId+${interaction.user.id}` && currentPage > 0){
+                        currentPage--;
+                    }
+                    else if(interaction.customId === `NextId+${interaction.user.id}` && (0 < currentPage < pages[0].length-1)){
+                        currentPage++;
+                    }
+
+                    //build new clones of buttons where false = not expired, currentPage for correct buttons
+                    //build new bet button for the current parameter
+                    const [prev, next] = makeButtons(false, currentPage, userID);
+                    const bet = betButton(userID);
+
+                    //throw into action row
+                    //one row for the 1. navigation of the stats, 2. for the button for intiating a bet
+                    const buttons = new ActionRowBuilder().addComponents(prev, next, bet);
+
+                    //update the embed page with the previous or next page
+                    //response to new interactions
+                    await interaction.update({embeds: [pages[0][currentPage]], 
+                                            components: [buttons], 
+                                            files: (pages.length > 3)? [pages[2][currentPage], pages[3]]: [pages[2][currentPage]],});
                 }
-                else if(interaction.customId === 'NextId' && currentPage < pages[0].length-1){
-                    currentPage++;
+                //check if the button pressed was the correct person
+                else if(interaction.customId === `Bet+${interaction.user.id}`){
+
+                    currentPage = -1;
+
+                    const betEmbed = new EmbedBuilder()
+                                     .setTitle('Bet Commencing')
+                                     .setDescription('Bet is currently being held ...........')
+                                     .setColor('Blue');
+                    
+                    //edit to new embed for the betting
+                    await embed.edit({embeds: [betEmbed],
+                                      components: [],
+                                      files: [],
+                                    });
                 }
-
-                //build new clones of buttons where false = not expired, currentPage for correct buttons
-                const [prev, next] = makeButtons(false,currentPage);
-
-                //throw into action row
-                const buttons = new ActionRowBuilder().addComponents(prev, next);
-
-                //update the embed page with the previous or next page
-                await interaction.update({embeds: [pages[0][currentPage]], 
-                                        components: [buttons], 
-                                        files: (pages.length > 3)? [pages[2][currentPage], pages[3]]: [pages[2][currentPage]],});
             });
 
             //handles the timeout
             collector.on('end', async () => {
-                //build new clones of buttons
-                const [prev, next] = makeButtons(true,currentPage);
-                const buttons = new ActionRowBuilder().addComponents(prev, next);
 
-                await embed.edit({embeds: [pages[0][currentPage]], 
-                                components: [buttons], 
-                                files: (pages.length > 3)? [pages[2][currentPage], pages[3]]: [pages[2][currentPage]],});
+                if(currentPage === -1){
+                    const betEmbed = new EmbedBuilder()
+                                    .setTitle('Bet Expired')
+                                    .setDescription('The match was not detected and the bet has expired')
+                                    .setColor('Blue');
+                    await embed.edit({embeds: [betEmbed],
+                                      components: [],
+                                      files: [],
+                                    });
+                }
+                else{
+                    //build new clones of buttons
+                    const [prev, next] = makeButtons(true, currentPage, userID);
+                    const bet = betButton(userID);
+                    const buttons = new ActionRowBuilder().addComponents(prev, next, bet);
+
+                    //edit message directly with await embed.edit (no interaction causes change)
+                    await embed.edit({embeds: [pages[0][currentPage]], 
+                                    components: [buttons], 
+                                    files: (pages.length > 3)? [pages[2][currentPage], pages[3]]: [pages[2][currentPage]],});
+                }
             });
-        }catch(error){
+        }
+        catch(error){
             console.error(`Error Caught: ${error.message}`);
         }
     }
@@ -212,7 +254,6 @@ client.on('messageCreate', async (message) => {
         }
     }
     else if(cmd === '$wallet') {
-        const userID = message.author.id;
         const amount = getWallet(userID);
         message.channel.send(`You currently have $${amount} 💎`);
     }

@@ -7,7 +7,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 //isDisabled, on timeout --> the prev and next buttons will pass true so the buttons no longer work
-export const makeButtons = (isDisabled, pageNum) => {
+//use the userID to create a custom button that can only be enabled by the one who made the message
+export const makeButtons = (isDisabled, pageNum, userID) => {
 
     let disablePrev = true;
     let disableNext = true;
@@ -31,13 +32,13 @@ export const makeButtons = (isDisabled, pageNum) => {
     }
 
     const button1 = new ButtonBuilder()
-        .setCustomId('PrevId')
+        .setCustomId(`PrevId+${userID}`)
         .setLabel('Prev')
         .setStyle(ButtonStyle.Primary)
         .setDisabled(disablePrev);
 
     const button2 = new ButtonBuilder()
-        .setCustomId('NextId')
+        .setCustomId(`NextId+${userID}`)
         .setLabel('Next')
         .setStyle(ButtonStyle.Primary)
         .setDisabled(disableNext);
@@ -45,12 +46,22 @@ export const makeButtons = (isDisabled, pageNum) => {
     return [button1, button2]
 }
 
-export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY){
+export function betButton(userID){
+    const bet_button = new ButtonBuilder()
+        .setCustomId(`Bet+${userID}`)
+        .setLabel(`Bet On this Stat`)
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(false);
+
+    return bet_button
+}
+
+export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY, userID){
     const summoner_info = await getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY);
 
     const puuid = summoner_info["puuid"];
 
-    const count = 51;
+    const count = 36;
 
     const match_ids = await getLOLMatchIDs(REGION, API_KEY, puuid, count);
 
@@ -186,10 +197,11 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     const embed = [embed1,embed2,embed3,];
     
     //buttons for previous and next
-    const [prev, next] = makeButtons(false, 0);
+    const [prev, next] = makeButtons(false, 0, userID);
+    const bet = betButton(userID);
     
     //create row for these actions
-    const buttons = new ActionRowBuilder().addComponents(prev, next);
+    const buttons = new ActionRowBuilder().addComponents(prev, next,bet);
     
     //pass array of pages, buttons, and array of attachments
     //Check for easter egg

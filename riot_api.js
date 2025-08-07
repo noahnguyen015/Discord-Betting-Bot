@@ -5,8 +5,8 @@ import Bottleneck from 'bottleneck'
 
 
 //Bottleneck settings
-const limit = new Bottleneck ({resevoir: 17, //max 20 requests
-                                resevoirRefreshAmount: 17, //the amount of refills (how many requests to add when refreshes)
+const limit = new Bottleneck ({resevoir: 12, //max 20 requests
+                                resevoirRefreshAmount: 12, //the amount of refills (how many requests to add when refreshes)
                                 reservoirRefreshInterval: 1000 })//every 1 second (how long till full refill)
 
 
