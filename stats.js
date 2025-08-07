@@ -15,6 +15,7 @@ export const makeButtons = (isDisabled, pageNum, userID) => {
 
     if(!isDisabled){
         if(pageNum == 0){
+        //first page shouldn't be able to go back
             disablePrev = true;
             disableNext = false;
         }
@@ -23,6 +24,7 @@ export const makeButtons = (isDisabled, pageNum, userID) => {
             disableNext = false;
         }
         else if(pageNum == 2){
+        //last page shouldn't be able to go forward
             disablePrev = false;
             disableNext = true;
         }
@@ -139,13 +141,20 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
         descriptions.push(generateLOLDescription(kills[i], deaths[i], assists[i], matchDates[i], champions[i]));
     }
 
+    //get averages of the last 5 matches for the betting
+    const avgKills = getAverage(kills);
+    const avgDeaths = getAverage(deaths);
+    const avgAssists = getAverage(assists);
+
+    console.log(`${avgKills}/${avgDeaths}/${avgAssists}`);
+
     //map of buffers
     let buffers = {};
 
     //returns buffers of the graphs, add them to a map
-    buffers['killBuffer'] = await graphLOLData(kills, matchDates, 'Kills');
-    buffers['deathBuffer'] = await graphLOLData(deaths, matchDates, 'Deaths');
-    buffers['assistBuffer'] = await graphLOLData(assists, matchDates, 'Assists');
+    buffers['killBuffer'] = await graphLOLData(kills, matchDates, 'Kills', avgKills);
+    buffers['deathBuffer'] = await graphLOLData(deaths, matchDates, 'Deaths', avgDeaths);
+    buffers['assistBuffer'] = await graphLOLData(assists, matchDates, 'Assists', avgAssists);
 
     //create a file attachment (image attachment PNG) 
     //use buffer to assign to file for the discord embed message and assign name to the file/image for the attachment
@@ -153,7 +162,7 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     const d_attachment = new AttachmentBuilder(buffers['deathBuffer'], {name: 'deaths_graph.png'});
     const a_attachment = new AttachmentBuilder(buffers['assistBuffer'], {name: 'assists_graph.png'});
 
-    //pages for each of the stats presented:
+    //builds pages for each of the stats presented:
     const embed1 = new EmbedBuilder()
                     .setTitle('Kills Per Game')
                     .setDescription(`${descriptions[0]}
@@ -206,10 +215,10 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     //pass array of pages, buttons, and array of attachments
     //Check for easter egg
     if(checkEE1 && checkEE2 && checkEE3){
-        return [embed, buttons, [k_attachment, d_attachment, a_attachment], checkEE1]
+        return {embed: embed, nav_buttons: buttons, attachments: [k_attachment, d_attachment, a_attachment], matches: match_ids, easteregg: checkEE1}
     }
 
-    return [embed, buttons, [k_attachment, d_attachment, a_attachment]]
+    return {embed: embed, nav_buttons: buttons, attachments: [k_attachment, d_attachment, a_attachment], matches: match_ids}
 }
 
 export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY){
@@ -251,8 +260,12 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
         descriptions[i] = generateTFTDescription(match_dates[i], placements[i]);
     }
 
+    const avgPlacement = getAverage(placements);
+
+    console.log(avgPlacement)
+
     //generate buffer for the TFT graph
-    const buffer = await graphTFTData(placements, match_dates, 'Placement');
+    const buffer = await graphTFTData(placements, match_dates, 'Placement', avgPlacement);
     //create attachment for embed files
     const attachment = new AttachmentBuilder(buffer, {name: 'placement_graph.png'})
 
@@ -268,9 +281,9 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     const EECheck1 = getEasterEgg(SUMMONER_NAME, TAGLINE, embed1);
 
     if(EECheck1)
-        return [embed1, attachment, EECheck1];
+        return {embed: embed1, attachment: attachment, easteregg: EECheck1};
 
-    return [embed1, attachment];
+    return {embed: embed1, attachment: attachment};
 }
 
 export function generateLOLDescription(kills, deaths, assists, matchDate, champion){
@@ -356,4 +369,18 @@ function getEasterEgg(SUMMONER_NAME, TAGLINE, embed){
     }
 
     return thumbnailAttachment
+}
+
+//get the averages over the last couples of games
+function getAverage(arr){
+
+    let sum = 0
+
+    for(let i = 0; i < arr.length; i++){
+        sum += arr[i];
+    }
+
+    const total = Math.round(sum/arr.length);
+
+    return total
 }

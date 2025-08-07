@@ -99,13 +99,14 @@ client.on('messageCreate', async (message) => {
             }
 
             let currentPage = 0;
+            let isBetting = 0;
 
             //build the embedded message
             //send the pages over starting with first page, and the buttons, then the attachment variables
             //check the length > 3? means easter egg is there, if not then just use the graph, else use the thumbnail
-            const embed = await message.channel.send({embeds: [pages[0][0]], 
-                                                    components: [pages[1]],
-                                                    files: (pages.length > 3)? [pages[2][0], pages[3]] : [pages[2][0]],
+            const embed = await message.channel.send({embeds: [pages['embed'][0]], 
+                                                    components: [pages['nav_buttons']],
+                                                    files: ('easteregg' in pages)? [pages['attachments'][0], pages['easteregg']] : [pages['attachments'][0]],
                                                     });
 
             //look for interaction, keep u for 4 minutes 240__000 means 240 seconds
@@ -120,7 +121,7 @@ client.on('messageCreate', async (message) => {
                     if(interaction.customId === `PrevId+${interaction.user.id}` && currentPage > 0){
                         currentPage--;
                     }
-                    else if(interaction.customId === `NextId+${interaction.user.id}` && (0 < currentPage < pages[0].length-1)){
+                    else if(interaction.customId === `NextId+${interaction.user.id}` && (0 < currentPage < 3)){
                         currentPage++;
                     }
 
@@ -135,14 +136,14 @@ client.on('messageCreate', async (message) => {
 
                     //update the embed page with the previous or next page
                     //response to new interactions
-                    await interaction.update({embeds: [pages[0][currentPage]], 
+                    await interaction.update({embeds: [pages['embed'][currentPage]], 
                                             components: [buttons], 
-                                            files: (pages.length > 3)? [pages[2][currentPage], pages[3]]: [pages[2][currentPage]],});
+                                            files: ('easteregg' in pages)? [pages['attachments'][currentPage], pages['easteregg']]: [pages['attachments'][currentPage]],});
                 }
                 //check if the button pressed was the correct person
                 else if(interaction.customId === `Bet+${interaction.user.id}`){
 
-                    currentPage = -1;
+                    isBetting = true;
 
                     const betEmbed = new EmbedBuilder()
                                      .setTitle('Bet Commencing')
@@ -160,7 +161,7 @@ client.on('messageCreate', async (message) => {
             //handles the timeout
             collector.on('end', async () => {
 
-                if(currentPage === -1){
+                if(isBetting){
                     const betEmbed = new EmbedBuilder()
                                     .setTitle('Bet Expired')
                                     .setDescription('The match was not detected and the bet has expired')
@@ -177,9 +178,9 @@ client.on('messageCreate', async (message) => {
                     const buttons = new ActionRowBuilder().addComponents(prev, next, bet);
 
                     //edit message directly with await embed.edit (no interaction causes change)
-                    await embed.edit({embeds: [pages[0][currentPage]], 
+                    await embed.edit({embeds: [pages['embed'][currentPage]], 
                                     components: [buttons], 
-                                    files: (pages.length > 3)? [pages[2][currentPage], pages[3]]: [pages[2][currentPage]],});
+                                    files: ('easteregg' in pages)? [pages['attachments'][currentPage], pages['easteregg']]: [pages['attachments'][currentPage]],});
                 }
             });
         }
@@ -234,8 +235,8 @@ client.on('messageCreate', async (message) => {
                 throw new Error('Error has occured; Insufficient or Unretrievable data');
             }
 
-            const embed = await message.channel.send({embeds: [pages[0]],
-                                                      files: (pages.length > 2)? [pages[1], pages[2]]: [pages[1]]});
+            const embed = await message.channel.send({embeds: [pages['embed']],
+                                                      files: ('easteregg' in pages)? [pages['attachment'], pages['easteregg']]: [pages['attachment']]});
 
             //look for interaction, keep u for 4 minutes 240__000 means 240 seconds
             const collector = embed.createMessageComponentCollector({time: 240_000});
