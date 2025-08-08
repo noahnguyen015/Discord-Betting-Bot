@@ -105,12 +105,12 @@ client.on('messageCreate', async (message) => {
             //send the pages over starting with first page, and the buttons, then the attachment variables
             //check the length > 3? means easter egg is there, if not then just use the graph, else use the thumbnail
             const embed = await message.channel.send({embeds: [pages['embed'][0]], 
-                                                    components: [pages['nav_buttons']],
+                                                    components: [pages['nav_buttons'], pages['bet_buttons']],
                                                     files: ('easteregg' in pages)? [pages['attachments'][0], pages['easteregg']] : [pages['attachments'][0]],
                                                     });
 
             //look for interaction, keep u for 4 minutes 240__000 means 240 seconds
-            const collector = embed.createMessageComponentCollector({time: 240_000});
+            const collector = embed.createMessageComponentCollector({time: 60_000});
 
             //collect interaction
             collector.on('collect', async (interaction) => {
@@ -128,27 +128,52 @@ client.on('messageCreate', async (message) => {
                     //build new clones of buttons where false = not expired, currentPage for correct buttons
                     //build new bet button for the current parameter
                     const [prev, next] = makeButtons(false, currentPage, userID);
-                    const bet = betButton(userID);
+                    const betUnder = betButton(userID, 'UNDER', false);
+                    const betOver = betButton(userID, 'OVER', false);
 
                     //throw into action row
                     //one row for the 1. navigation of the stats, 2. for the button for intiating a bet
-                    const buttons = new ActionRowBuilder().addComponents(prev, next, bet);
+                    const nav_clone = new ActionRowBuilder().addComponents(prev, next);
+                    const bet_clone = new ActionRowBuilder().addComponents(betUnder, betOver);
 
                     //update the embed page with the previous or next page
                     //response to new interactions
                     await interaction.update({embeds: [pages['embed'][currentPage]], 
-                                            components: [buttons], 
+                                            components: [nav_clone, bet_clone], 
                                             files: ('easteregg' in pages)? [pages['attachments'][currentPage], pages['easteregg']]: [pages['attachments'][currentPage]],});
                 }
                 //check if the button pressed was the correct person
-                else if(interaction.customId === `Bet+${interaction.user.id}`){
+                else if(interaction.customId === `Bet+${interaction.user.id}+UNDER` || interaction.customId === `Bet+${interaction.user.id}+OVER`){
+
+                    let betType = '';
+
+                    if(interaction.customId === `Bet+${interaction.user.id}+UNDER`)
+                        betType = 'UNDER'
+                    else 
+                        betType = 'OVER'
 
                     isBetting = true;
+                    let line = '';
+                    let average = -1;
+
+                    if(currentPage === 0){
+                        line = 'Kills';
+                        average = pages['average']['kills'];
+                    }else if(currentPage === 1){
+                        line = 'Deaths';
+                        average = pages['average']['deaths'];
+                    }else if(currentPage === 2){
+                        line = 'Assists';
+                        average = pages['average']['deaths'];
+                    }else{
+                        line = 'ERROR';
+                        average = -1;
+                    }
 
                     const betEmbed = new EmbedBuilder()
-                                     .setTitle('Bet Commencing')
-                                     .setDescription('Bet is currently being held ...........')
-                                     .setColor('Blue');
+                                     .setTitle('Bet is Placed!')
+                                     .setDescription(`Your Current Line is: ${betType} ${average} ${line} (...)`)
+                                     .setColor('Green');
                     
                     //edit to new embed for the betting
                     await embed.edit({embeds: [betEmbed],
@@ -161,11 +186,12 @@ client.on('messageCreate', async (message) => {
             //handles the timeout
             collector.on('end', async () => {
 
+                //check if the bet expired or just the stat embedded pages
                 if(isBetting){
                     const betEmbed = new EmbedBuilder()
                                     .setTitle('Bet Expired')
                                     .setDescription('The match was not detected and the bet has expired')
-                                    .setColor('Blue');
+                                    .setColor('Red');
                     await embed.edit({embeds: [betEmbed],
                                       components: [],
                                       files: [],
@@ -174,12 +200,16 @@ client.on('messageCreate', async (message) => {
                 else{
                     //build new clones of buttons
                     const [prev, next] = makeButtons(true, currentPage, userID);
-                    const bet = betButton(userID);
-                    const buttons = new ActionRowBuilder().addComponents(prev, next, bet);
+
+                    const betUnder = betButton(userID, 'UNDER', true);
+                    const betOver = betButton(userID, 'OVER', true);
+    
+                    const nav_clone = new ActionRowBuilder().addComponents(prev, next);
+                    const bet_clone = new ActionRowBuilder().addComponents(betUnder, betOver);
 
                     //edit message directly with await embed.edit (no interaction causes change)
                     await embed.edit({embeds: [pages['embed'][currentPage]], 
-                                    components: [buttons], 
+                                    components: [nav_clone, bet_clone], 
                                     files: ('easteregg' in pages)? [pages['attachments'][currentPage], pages['easteregg']]: [pages['attachments'][currentPage]],});
                 }
             });
@@ -225,10 +255,13 @@ client.on('messageCreate', async (message) => {
         TAGLINE = summoner.slice(tagidx+1).trim();
 
         try{
+
+            let isBetting = false;
+
             message.channel.send(`The current summoner is: ${SUMMONER_NAME} \nThe tag is ${TAGLINE}`);
 
             //get the buttons and embed pages
-            const pages = await getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY);
+            const pages = await getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY, userID);
 
             if(!pages){
                 message.channel.send('❌ Insufficient Number of Matches Found. Has this user played enough games?"');
@@ -236,17 +269,67 @@ client.on('messageCreate', async (message) => {
             }
 
             const embed = await message.channel.send({embeds: [pages['embed']],
+                                                      components: [pages['bet_buttons']],
                                                       files: ('easteregg' in pages)? [pages['attachment'], pages['easteregg']]: [pages['attachment']]});
 
             //look for interaction, keep u for 4 minutes 240__000 means 240 seconds
-            const collector = embed.createMessageComponentCollector({time: 240_000});
+            const collector = embed.createMessageComponentCollector({time: 60_000});
 
             //collect interaction
             collector.on('collect', async (interaction) => {
+                
+                if(interaction.customId === `Bet+${interaction.user.id}+UNDER` || interaction.customId === `Bet+${interaction.user.id}+OVER`){
+
+                    isBetting = true;
+                    let betType = '';
+
+                    if(interaction.customId === `Bet+${interaction.user.id}+UNDER`)
+                        betType = 'UNDER'
+                    else 
+                        betType = 'OVER'
+
+                    let line = 'Placement';
+                    let average = pages['average'];
+
+                    const betEmbed = new EmbedBuilder()
+                                     .setTitle('Bet is Placed!')
+                                     .setDescription(`Your Current Line is: ${betType} ${average} for ${line} (...)`)
+                                     .setColor('Green');
+                    
+                    //edit to new embed for the betting
+                    await embed.edit({embeds: [betEmbed],
+                                      components: [],
+                                      files: [],
+                                    });
+                }
+                                    
             });
 
             //handles the timeout
             collector.on('end', async () => {
+                
+                if(isBetting){
+                    const betEmbed = new EmbedBuilder()
+                                    .setTitle('Bet Expired')
+                                    .setDescription('The match was not detected and the bet has expired')
+                                    .setColor('Red');
+
+                    await embed.edit({embeds: [betEmbed],
+                                      components: [],
+                                      files: [],
+                                    });
+                }
+                else{
+                    const betUnder = betButton(userID, 'UNDER', true);
+                    const betOver = betButton(userID, 'OVER', true);
+    
+                    const bet_clone = new ActionRowBuilder().addComponents(betUnder, betOver);
+
+                    await embed.edit({embeds: [pages['embed']],
+                                                      components: [bet_clone],
+                                                      files: ('easteregg' in pages)? [pages['attachment'], pages['easteregg']]: [pages['attachment']]});;
+                }
+                                                      
             });
 
 

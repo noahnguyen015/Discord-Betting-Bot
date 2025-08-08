@@ -15,7 +15,7 @@ export async function graphLOLData(match_data, dates, datalabel, average){
       //but data is given recent --> past
   const barColors = match_data.slice().reverse().map(data => 
     data == average ? 'rgba(119, 118, 118, 1)': 
-    data > average? 'rgba(66, 133, 60, 1)': 'rgba(141, 99, 255, 0.6)');
+    data > average? 'rgba(66, 133, 60, 1)': 'rgba(126, 38, 38, 1)');
 
   //edit the settings of chart
   const settings = {
@@ -70,7 +70,7 @@ export async function graphTFTData(match_data, dates, datalabel, average){
 
   const barColors = match_data.slice().reverse().map(data => 
     data == average ? 'rgba(119, 118, 118, 1)': 
-    data > average? 'rgba(66, 133, 60, 1)': 'rgba(141, 99, 255, 0.6)');
+    data > average? 'rgba(126, 38, 38, 1)': 'rgba(66, 133, 60, 1)');
 
 
   //edit the settings of chart

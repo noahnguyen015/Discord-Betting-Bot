@@ -48,12 +48,13 @@ export const makeButtons = (isDisabled, pageNum, userID) => {
     return [button1, button2]
 }
 
-export function betButton(userID){
+export function betButton(userID, betType, isDisabled){
+
     const bet_button = new ButtonBuilder()
-        .setCustomId(`Bet+${userID}`)
-        .setLabel(`Bet On this Stat`)
+        .setCustomId(`Bet+${userID}+${betType}`)
+        .setLabel(betType === 'UNDER'? `Bet Under 🔽 (100💎)`: `Bet Over 🔼 (100💎)`)
         .setStyle(ButtonStyle.Primary)
-        .setDisabled(false);
+        .setDisabled(isDisabled);
 
     return bet_button
 }
@@ -170,7 +171,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[2]}
                                      ${descriptions[3]}
                                      ${descriptions[4]}
-                                     \nKills Over the Last 5 Matches`)
+                                     \nKills Over the Last 5 Matches
+                                     BET: Over/Under ${avgAssists}`)
                     .setColor('Purple')
                     .setImage('attachment://kills_graph.png');
 
@@ -181,7 +183,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[2]}
                                      ${descriptions[3]}
                                      ${descriptions[4]}
-                                     \nDeaths Over the Last 5 Matches`)
+                                     \nDeaths Over the Last 5 Matches
+                                     BET: Over/Under ${avgAssists}`)
                     .setColor('Purple')
                     .setImage('attachment://deaths_graph.png');
 
@@ -192,7 +195,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[2]}
                                      ${descriptions[3]}
                                      ${descriptions[4]}
-                                     \nAssists Over the Last 5 Matches`)
+                                     \nAssists Over the Last 5 Matches
+                                     BET: Over/Under ${avgAssists}`)
                     .setColor('Purple')
                     .setImage('attachment://assists_graph.png');
 
@@ -207,21 +211,33 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     
     //buttons for previous and next
     const [prev, next] = makeButtons(false, 0, userID);
-    const bet = betButton(userID);
+    const betUnder = betButton(userID, 'UNDER', false);
+    const betOver = betButton(userID, 'OVER', false);
     
     //create row for these actions
-    const buttons = new ActionRowBuilder().addComponents(prev, next,bet);
+    const buttons = new ActionRowBuilder().addComponents(prev, next);
+    const bet_row = new ActionRowBuilder().addComponents(betUnder, betOver);
     
     //pass array of pages, buttons, and array of attachments
     //Check for easter egg
     if(checkEE1 && checkEE2 && checkEE3){
-        return {embed: embed, nav_buttons: buttons, attachments: [k_attachment, d_attachment, a_attachment], matches: match_ids, easteregg: checkEE1}
+        return {embed: embed, 
+                nav_buttons: buttons, bet_buttons: bet_row,
+                attachments: [k_attachment, d_attachment, a_attachment], 
+                matches: match_ids, 
+                average: {kills: avgKills, deaths: avgDeaths, assists: avgAssists},
+                easteregg: checkEE1}
     }
 
-    return {embed: embed, nav_buttons: buttons, attachments: [k_attachment, d_attachment, a_attachment], matches: match_ids}
+    return {embed: embed, 
+            nav_buttons: buttons, bet_buttons: bet_row,
+            attachments: [k_attachment, d_attachment, a_attachment], 
+            matches: match_ids,
+            average: {kills: avgKills, deaths: avgDeaths, assists: avgAssists},
+            }
 }
 
-export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY){
+export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY, userID){
 
     const summoner_info = await getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY);
 
@@ -262,7 +278,10 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
 
     const avgPlacement = getAverage(placements);
 
-    console.log(avgPlacement);
+    const betUnder = betButton(userID, 'UNDER', false);
+    const betOver = betButton(userID, 'OVER', false);
+
+    const bet_row = new ActionRowBuilder().addComponents(betUnder, betOver);
 
     //generate buffer for the TFT graph
     const buffer = await graphTFTData(placements, match_dates, 'Placement', avgPlacement);
@@ -275,15 +294,22 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                    .setDescription(`The placements of the last 10 matches:
                                     ${descriptions[9]}${descriptions[8]}${descriptions[7]}${descriptions[6]}${descriptions[5]}
                                     ${descriptions[4]}${descriptions[3]}${descriptions[2]}${descriptions[1]}${descriptions[0]}`)
-                    .setColor('Purple')
+                   .setColor('Purple')
                    .setImage('attachment://placement_graph.png');
 
     const EECheck1 = getEasterEgg(SUMMONER_NAME, TAGLINE, embed1);
 
     if(EECheck1)
-        return {embed: embed1, attachment: attachment, easteregg: EECheck1};
+        return {embed: embed1, 
+                bet_buttons: bet_row,
+                attachment: attachment,
+                average: avgPlacement, 
+                easteregg: EECheck1};
 
-    return {embed: embed1, attachment: attachment};
+    return {embed: embed1, 
+            bet_buttons: bet_row,
+            attachment: attachment,
+            average: avgPlacement, };
 }
 
 export function generateLOLDescription(kills, deaths, assists, matchDate, champion){
