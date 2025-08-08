@@ -139,9 +139,9 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     }
 
     //get averages of the last 5 matches for the betting
-    const avgKills = getAverage(kills);
-    const avgDeaths = getAverage(deaths);
-    const avgAssists = getAverage(assists);
+    const avgKills = getAverage(kills, 'lol');
+    const avgDeaths = getAverage(deaths, 'lol');
+    const avgAssists = getAverage(assists, 'lol');
 
     console.log(`${avgKills}/${avgDeaths}/${avgAssists}`);
 
@@ -274,7 +274,7 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
         descriptions[i] = generateTFTDescription(match_dates[i], placements[i]);
     }
 
-    const avgPlacement = getAverage(placements);
+    const avgPlacement = getAverage(placements, "tft");
 
     const betUnder = betButton(userID, 'UNDER', false);
     const betOver = betButton(userID, 'OVER', false);
@@ -298,6 +298,7 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
 
     const EECheck1 = getEasterEgg(SUMMONER_NAME, TAGLINE, embed1);
 
+    //add easter egg if it exists, otherwise pass the parameters back to the message
     if(EECheck1)
         return {embed: embed1, 
                 bet_buttons: bet_row,
@@ -398,7 +399,9 @@ function getEasterEgg(SUMMONER_NAME, TAGLINE, embed){
 }
 
 //get the averages over the last couples of games
-function getAverage(arr){
+//Basic idea: make lines slightly better than average
+    //Done by subtracting for league lines, adding for tft lines
+function getAverage(arr, gameType){
 
     let sum = 0;
 
@@ -410,8 +413,11 @@ function getAverage(arr){
     const average = sum/arr.length;
     
     if(Number.isInteger(average)){
-        //make the line 1 - average
-        return average - 1;
+        if(gameType === 'lol')
+            //make the line 1 - average
+            return average - 1;
+        else if(gameType === 'tft')
+            return average + 1;
     }
 
     //round fraction part to 2 places
@@ -421,12 +427,22 @@ function getAverage(arr){
     const fraction = rounded - Math.trunc(rounded);
 
     //if fraction is bigger, just return the number without the fraction as the line
+        //make the line a little easier to hit be removing the fraction
     if(fraction >= 0.5){
-        return Math.trunc(rounded)
+        if(gameType === 'lol')
+            return Math.trunc(rounded);
+        else if(gameType === 'tft')
+            //for tft, make easier by adding 1, (aka rounding up) (make under more inclusive)
+            return Math.trunc(rounded) + 1;
     
-    //if the average is smaller, return the number - 0.5, make it half
-    }else if(fraction < 0.5){
-        return Math.trunc(rounded) - 0.5
+    //if the fraction is smaller, return the number - 0.5, make it half
+    }
+    else if(fraction < 0.5){
+        if(gameType === 'lol')
+            return Math.trunc(rounded) - 0.5
+        else if(gameType === 'tft')
+            //in tft, lower = better, so add .5 to the line if there is a fraction less than 0.5 for placement (more inclusive)
+            return Math.trunc(rounded) + 0.5
     }
 
     return -1
