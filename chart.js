@@ -9,6 +9,14 @@ export async function graphLOLData(match_data, dates, datalabel, average){
 
   const threshholdPlugin = createLine();
 
+  //slice, make shallow copy, reverse the copied array, then map it
+  //make new array of all the bar colors
+  //data needs to be reversed because graph goes past --> recent
+      //but data is given recent --> past
+  const barColors = match_data.slice().reverse().map(data => 
+    data == average ? 'rgba(119, 118, 118, 1)': 
+    data > average? 'rgba(66, 133, 60, 1)': 'rgba(141, 99, 255, 0.6)');
+
   //edit the settings of chart
   const settings = {
     type: 'bar',
@@ -26,14 +34,16 @@ export async function graphLOLData(match_data, dates, datalabel, average){
         label: datalabel,
         //actual data of the chosen stat
         data: [match_data[4],match_data[3],match_data[2],match_data[1],match_data[0]],
-        backgroundColor: 'rgba(141, 99, 255, 0.6)',
+        //arrow functions implicit return (knows to return the single expression/statement)
+        //more than 1 line, needs return
+        backgroundColor: barColors,
       }],
     },
     options: {
     //plugins to customize the chart and modify data before or after chart is drawn
     //change the font color of the legend labels and scales (both built-in plugins)
       plugins: {
-        legend: {labels: {color: 'rgba(255, 255, 255, 1)',  font: {size: 14}}},
+        legend: {display: false},
         //configure custom plugin (use id: parameter not var name)
         threshholdLine: {y: average, color: 'rgba(255, 255, 255, 1)'},
       },
@@ -53,10 +63,15 @@ export async function graphLOLData(match_data, dates, datalabel, average){
   return buffer
 }
 
-export async function graphTFTData(match_data, dates, datalabel){
+export async function graphTFTData(match_data, dates, datalabel, average){
 
   const chart = new ChartJSNodeCanvas({width: 300, height: 200});
   const threshholdPlugin = createLine();
+
+  const barColors = match_data.slice().reverse().map(data => 
+    data == average ? 'rgba(119, 118, 118, 1)': 
+    data > average? 'rgba(66, 133, 60, 1)': 'rgba(141, 99, 255, 0.6)');
+
 
   //edit the settings of chart
   const settings = {
@@ -80,13 +95,13 @@ export async function graphTFTData(match_data, dates, datalabel){
         label: datalabel,
         //actual data of the chosen stat
         data: [match_data[9],match_data[8],match_data[7],match_data[6],match_data[5],match_data[4],match_data[3],match_data[2],match_data[1],match_data[0]],
-        backgroundColor: 'rgba(141, 99, 255, 0.6)',
+        backgroundColor: barColors,
       }],
     },
     options: {
     //change the font color of the legend labels
       plugins: {
-        legend: {labels: {color: 'rgba(255, 255, 255, 1)',  font: {size: 14}}},
+        legend: {display: false},
         threshholdLine: {y: average, color: 'rgba(255, 255, 255, 1)'},
       },
       //control styling and labels/ticks of x and y axis

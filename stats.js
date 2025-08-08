@@ -262,7 +262,7 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
 
     const avgPlacement = getAverage(placements);
 
-    console.log(avgPlacement)
+    console.log(avgPlacement);
 
     //generate buffer for the TFT graph
     const buffer = await graphTFTData(placements, match_dates, 'Placement', avgPlacement);
@@ -345,9 +345,6 @@ function getEasterEgg(SUMMONER_NAME, TAGLINE, embed){
             //path.join builds a file path that works for every system
             const imagePath = path.join(__dirname, 'assets', 'danny_icon.JPG');
             embed.setThumbnail(`attachment://danny_icon.JPG`);
-            //embed2.setThumbnail(`attachment://danny_icon.JPG`);
-            //embed3.setThumbnail(`attachment://danny_icon.JPG`);
-
             //create attachment for embed of the image
             thumbnailAttachment = new AttachmentBuilder(imagePath);
 
@@ -374,13 +371,34 @@ function getEasterEgg(SUMMONER_NAME, TAGLINE, embed){
 //get the averages over the last couples of games
 function getAverage(arr){
 
-    let sum = 0
+    let sum = 0;
 
     for(let i = 0; i < arr.length; i++){
         sum += arr[i];
     }
 
-    const total = Math.round(sum/arr.length);
+    //get the actual average
+    const average = sum/arr.length;
+    
+    if(Number.isInteger(average)){
+        //make the line 1 - average
+        return average - 1;
+    }
 
-    return total
+    //round fraction part to 2 places
+    const rounded = average.toFixed(2);
+
+    //trunc = remove fraction part
+    const fraction = rounded - Math.trunc(rounded);
+
+    //if fraction is bigger, just return the number without the fraction as the line
+    if(fraction >= 0.5){
+        return Math.trunc(rounded)
+    
+    //if the average is smaller, return the number - 0.5, make it half
+    }else if(fraction < 0.5){
+        return Math.trunc(rounded) - 0.5
+    }
+
+    return -1
 }
