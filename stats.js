@@ -60,11 +60,12 @@ export function betButton(userID, betType, isDisabled){
 }
 
 export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY, userID){
+
     const summoner_info = await getSummonerInfo(ACCOUNT_REGION, SUMMONER_NAME, TAGLINE, API_KEY);
 
     const puuid = summoner_info["puuid"];
 
-    const count = 36;
+    const count = 10;
 
     const match_ids = await getLOLMatchIDs(REGION, API_KEY, puuid, count);
 
@@ -79,30 +80,25 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
 
     //Collect all of the games from the last 
     for(let i = 0; i < match_ids.length; i++){
-        try {
-            const match_stats = await getLOLMatchStats(REGION, API_KEY, match_ids[i]);
+        const match_stats = await getLOLMatchStats(REGION, API_KEY, match_ids[i]);
 
-            const participants = match_stats['info']['participants'];
-            const game_type = match_stats['info']['queueId'];
-            const matchDuration = match_stats['info']['gameDuration']; 
+        const participants = match_stats['info']['participants'];
+        const game_type = match_stats['info']['queueId'];
+        const matchDuration = match_stats['info']['gameDuration']; 
 
-            //if the game is normal-draft, ranked solo/duo, ranked flex, and not a remake
-            if((game_type === 400 || game_type === 420 || game_type === 440) && matchDuration > 600){
-                if(match_participants.length === 5)
-                    break;
-                else {
-                    //retrieve the actual date of the match
-                    //use the UNIX timestamp in milliseconds
-                    const matchDate = new Date(match_stats['info']['gameStartTimestamp']);
-                    const matchDay = matchDate.getDate(); //get the day of match for the graph
-                    const matchMonth = matchDate.getMonth() + 1; //0 indexed for the month of match
-                    matchDates.push({month: matchMonth, day: matchDay,});
-                    match_participants.push(participants);
-                }
+        //if the game is normal-draft, ranked solo/duo, ranked flex, and not a remake
+        if((game_type === 400 || game_type === 420 || game_type === 440) && matchDuration > 600){
+            if(match_participants.length === 5)
+                break;
+            else {
+                //retrieve the actual date of the match
+                //use the UNIX timestamp in milliseconds
+                const matchDate = new Date(match_stats['info']['gameStartTimestamp']);
+                const matchDay = matchDate.getDate(); //get the day of match for the graph
+                const matchMonth = matchDate.getMonth() + 1; //0 indexed for the month of match
+                matchDates.push({month: matchMonth, day: matchDay,});
+                match_participants.push(participants);
             }
-
-        }catch(error) {
-            console.error(error.message);
         }
     }
 
@@ -172,7 +168,7 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[3]}
                                      ${descriptions[4]}
                                      \nKills Over the Last 5 Matches
-                                     BET: Over/Under ${avgAssists}`)
+                                     BET: Over/Under ${avgKills}`)
                     .setColor('Purple')
                     .setImage('attachment://kills_graph.png');
 
@@ -184,7 +180,7 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[3]}
                                      ${descriptions[4]}
                                      \nDeaths Over the Last 5 Matches
-                                     BET: Over/Under ${avgAssists}`)
+                                     BET: Over/Under ${avgDeaths}`)
                     .setColor('Purple')
                     .setImage('attachment://deaths_graph.png');
 
@@ -224,7 +220,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
         return {embed: embed, 
                 nav_buttons: buttons, bet_buttons: bet_row,
                 attachments: [k_attachment, d_attachment, a_attachment], 
-                matches: match_ids, 
+                puuid: puuid,
+                match_ids: match_ids, 
                 average: {kills: avgKills, deaths: avgDeaths, assists: avgAssists},
                 easteregg: checkEE1}
     }
@@ -232,7 +229,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     return {embed: embed, 
             nav_buttons: buttons, bet_buttons: bet_row,
             attachments: [k_attachment, d_attachment, a_attachment], 
-            matches: match_ids,
+            puuid: puuid,
+            match_ids: match_ids,
             average: {kills: avgKills, deaths: avgDeaths, assists: avgAssists},
             }
 }
@@ -293,7 +291,8 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                    .setTitle('TFT Placements')
                    .setDescription(`The placements of the last 10 matches:
                                     ${descriptions[9]}${descriptions[8]}${descriptions[7]}${descriptions[6]}${descriptions[5]}
-                                    ${descriptions[4]}${descriptions[3]}${descriptions[2]}${descriptions[1]}${descriptions[0]}`)
+                                    ${descriptions[4]}${descriptions[3]}${descriptions[2]}${descriptions[1]}${descriptions[0]}
+                                    \nBET: Over/Under ${avgPlacement}`)
                    .setColor('Purple')
                    .setImage('attachment://placement_graph.png');
 
@@ -303,13 +302,17 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
         return {embed: embed1, 
                 bet_buttons: bet_row,
                 attachment: attachment,
+                puuid: puuid,
+                match_ids: match_ids,
                 average: avgPlacement, 
                 easteregg: EECheck1};
 
     return {embed: embed1, 
             bet_buttons: bet_row,
             attachment: attachment,
-            average: avgPlacement, };
+            puuid: puuid,
+            match_ids: match_ids,
+            average: avgPlacement,};
 }
 
 export function generateLOLDescription(kills, deaths, assists, matchDate, champion){

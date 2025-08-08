@@ -84,6 +84,7 @@ export async function getTFTMatchIDs(REGION, API_KEY, puuid, count){
 
 export async function getTFTMatchStats(REGION, API_KEY, match_id){
 
+    return limit.schedule(async () => {
     //match id fetch for the last 5 matches
     const response = await fetch(`https://${REGION}.api.riotgames.com/tft/match/v1/matches/${match_id}`,
     {
@@ -97,4 +98,6 @@ export async function getTFTMatchStats(REGION, API_KEY, match_id){
     const reply = await response.json();
 
     return reply
+    }
+    );
 }

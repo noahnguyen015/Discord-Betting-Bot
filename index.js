@@ -16,12 +16,6 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 //access the .env file for the token
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Replace with your bot token
 
-let SUMMONER_NAME = '';
-let TAGLINE = '';
-const ACCOUNT_REGION = 'americas' //accounts are global, just use any endpoints americas/europe/asia
-const REGION = 'americas' //for game data like matches and stats once you get PUUID which is regions-specific
-const API_KEY = process.env.API_KEY; //RIOT developer API key
-
 //runs once the bot is ready from successful login to Discord, shows print on console
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -38,9 +32,19 @@ client.once('ready', () => {
     guild = server it is in 
 */
 client.on('messageCreate', async (message) => {
+
+    let SUMMONER_NAME = '';
+    let TAGLINE = '';
+    const ACCOUNT_REGION = 'americas' //accounts are global, just use any endpoints americas/europe/asia
+    const REGION = 'americas' //for game data like matches and stats once you get PUUID which is regions-specific
+    const API_KEY = process.env.API_KEY; //RIOT developer API key
+
     //whether the message comes from bot
     if (message.author.bot) 
         return;
+
+    if (message.channel.name !== 'robot-testing')
+        return
 
     const userID = message.author.id;
 
@@ -51,17 +55,17 @@ client.on('messageCreate', async (message) => {
     const cmd = args.shift().toLowerCase();
 
     //for information (ss = summoner stats)
-    if (cmd === '$slol') {
+    if (cmd === '?slol') {
 
         //more than 1 argument check
         if(args.length <= 0){
-            message.channel.send('❗ Please enter the summoner name with the command $ss "SummonerName#TAG"');
+            message.channel.send('❗ Please enter the summoner name with the command ?slol "SummonerName#TAG"');
             return
         }
 
         //first index after cmd is 1st argument, check for quotes
         if (!args[0].startsWith('"') || !args[0].endsWith('"')){
-            message.channel.send('❗ Uh-Oh! make sure to quote your summoner name! $ss "SummonerName#TAG"');
+            message.channel.send('❗ Uh-Oh! make sure to quote your summoner name! ?slol "SummonerName#TAG"');
             return
         }
 
@@ -78,7 +82,7 @@ client.on('messageCreate', async (message) => {
 
         //if more than 1 tag or no tag, raise error
         if(count != 1){
-            message.channel.send('❗ Tag Error, please check your tag! $ss "SummonerName#TAG"');
+            message.channel.send('❗ Tag Error, please check your tag! ?slol "SummonerName#TAG"');
             return
         }
 
@@ -94,7 +98,7 @@ client.on('messageCreate', async (message) => {
             const pages = await getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY, userID);
 
             if(!pages){
-                message.channel.send('❌ Insufficient Number of Matches Found. Has this user played enough games?"');
+                message.channel.send('❌ Error Fetching Match Data"');
                 throw new Error('Error has occured; Insufficient or Unretrievable data');
             }
 
@@ -164,7 +168,7 @@ client.on('messageCreate', async (message) => {
                         average = pages['average']['deaths'];
                     }else if(currentPage === 2){
                         line = 'Assists';
-                        average = pages['average']['deaths'];
+                        average = pages['average']['assists'];
                     }else{
                         line = 'ERROR';
                         average = -1;
@@ -172,7 +176,7 @@ client.on('messageCreate', async (message) => {
 
                     const betEmbed = new EmbedBuilder()
                                      .setTitle('Bet is Placed!')
-                                     .setDescription(`Your Current Line is: ${betType} ${average} ${line} (...)`)
+                                     .setDescription(`Your Current Line: ${betType} ${average} ${line} (...)`)
                                      .setColor('Green');
                     
                     //edit to new embed for the betting
@@ -218,17 +222,17 @@ client.on('messageCreate', async (message) => {
             console.error(`Error Caught: ${error.message}`);
         }
     }
-    else if(cmd === '$stft'){
+    else if(cmd === '?stft'){
 
         //more than 1 argument check
         if(args.length <= 0){
-            message.channel.send('❗ Please enter the summoner name with the command $ss "SummonerName#TAG"');
+            message.channel.send('❗ Please enter the summoner name with the command ?stft "SummonerName#TAG"');
             return
         }
 
         //first index after cmd is 1st argument, check for quotes
         if (!args[0].startsWith('"') || !args[0].endsWith('"')){
-            message.channel.send('❗ Uh-Oh! make sure to quote your summoner name! $ss "SummonerName#TAG"');
+            message.channel.send('❗ Uh-Oh! make sure to quote your summoner name! ?stft "SummonerName#TAG"');
             return
         }
 
@@ -245,7 +249,7 @@ client.on('messageCreate', async (message) => {
 
         //if more than 1 tag or no tag, raise error
         if(count != 1){
-            message.channel.send('❗ Tag Error, please check your tag! $ss "SummonerName#TAG"');
+            message.channel.send('❗ Tag Error, please check your tag! ?stft "SummonerName#TAG"');
             return
         }
 
@@ -257,6 +261,7 @@ client.on('messageCreate', async (message) => {
         try{
 
             let isBetting = false;
+            let resultFound = false;
 
             message.channel.send(`The current summoner is: ${SUMMONER_NAME} \nThe tag is ${TAGLINE}`);
 
@@ -264,7 +269,7 @@ client.on('messageCreate', async (message) => {
             const pages = await getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION, API_KEY, userID);
 
             if(!pages){
-                message.channel.send('❌ Insufficient Number of Matches Found. Has this user played enough games?"');
+                message.channel.send('❌ Unable to Retrieve Match Data"');
                 throw new Error('Error has occured; Insufficient or Unretrievable data');
             }
 
@@ -273,7 +278,11 @@ client.on('messageCreate', async (message) => {
                                                       files: ('easteregg' in pages)? [pages['attachment'], pages['easteregg']]: [pages['attachment']]});
 
             //look for interaction, keep u for 4 minutes 240__000 means 240 seconds
-            const collector = embed.createMessageComponentCollector({time: 60_000});
+            const collector = embed.createMessageComponentCollector({time: 3_900_000});
+
+            //setup the interval outside the scope
+            //checks for data periodically 
+            let pollMatches = null;
 
             //collect interaction
             collector.on('collect', async (interaction) => {
@@ -283,32 +292,159 @@ client.on('messageCreate', async (message) => {
                     isBetting = true;
                     let betType = '';
 
-                    if(interaction.customId === `Bet+${interaction.user.id}+UNDER`)
+                    if(interaction.customId === `Bet+${interaction.user.id}+UNDER`){
                         betType = 'UNDER'
-                    else 
+                    }
+                    else {
                         betType = 'OVER'
+                    }
 
                     let line = 'Placement';
+
                     let average = pages['average'];
 
                     const betEmbed = new EmbedBuilder()
                                      .setTitle('Bet is Placed!')
-                                     .setDescription(`Your Current Line is: ${betType} ${average} for ${line} (...)`)
-                                     .setColor('Green');
+                                     .setDescription(`Your Current Line: ${betType} ${average} for ${line} (...)`)
+                                     .setColor('Purple');
                     
                     //edit to new embed for the betting
                     await embed.edit({embeds: [betEmbed],
                                       components: [],
                                       files: [],
                                     });
-                }
-                                    
-            });
 
+                    const current_matches = pages['match_ids'];
+                    
+                    //check for the data every 10 minutes
+                    pollMatches = setInterval(async () => {
+
+                        console.log('Polling...');
+
+                        const new_matches = await getTFTMatchIDs(ACCOUNT_REGION, API_KEY, pages['puuid'], 5);
+
+                        if(!new_matches)
+                            throw new Error('Polling for new match data failed')
+
+                        if(new_matches[0] !== current_matches[0]){
+
+                            console.log("NEW MATCH IS FOUND");
+
+                            isBetting = false;
+                            resultFound = true;
+
+                            clearInterval(pollMatches);
+    
+                            const new_data = await getTFTMatchStats(ACCOUNT_REGION, API_KEY, new_matches[0]);
+
+                            if(!new_data)
+                                throw new Error('Unable to get data for the new matches')
+
+                            const participants = new_data['info']['participants'];
+                            let newPlacement = -1;
+
+                            for(let i = 0; i < participants.length; i++){
+                                if((participants[i]['riotIdGameName'] === SUMMONER_NAME) && (participants[i]['riotIdTagline'] === TAGLINE)) {
+                                    console.log(`${SUMMONER_NAME}#${TAGLINE} is equal to ${participants[i]['riotIdGameName']}#${participants[i]['riotIdTagline']}`);
+                                    const participant = participants[i];
+                                    console.log(participant["placement"]);
+                                    newPlacement = participant["placement"];
+                                }
+                            }
+
+                            //show the result on the embed
+                            if(betType === 'UNDER'){
+                                if(newPlacement < average){
+                                    addWallet(userID, 200);
+                                    const resultEmbed = new EmbedBuilder()
+                                                    .setTitle('Result of Bet: Win! ✨')
+                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement} 🟩)
+                                                                    \nYou have won $200 💎`)
+                                                    .setColor('Green');
+                                    
+                                    //edit to new embed for the betting
+                                    await embed.edit({embeds: [resultEmbed],
+                                                    components: [],
+                                                    files: [],
+                                                    });
+                                }
+                                else if(newPlacement > average){
+                                    const resultEmbed = new EmbedBuilder()
+                                                    .setTitle('Result of Bet: Loss ')
+                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement} 🟥)`)
+                                                    .setColor('Red');
+                                    
+                                    //edit to new embed for the betting
+                                    await embed.edit({embeds: [resultEmbed],
+                                                    components: [],
+                                                    files: [],
+                                                    });
+                                }else{
+                                    const resultEmbed = new EmbedBuilder()
+                                                    .setTitle('Result of Bet: Tie ⬛')
+                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement} ⬛)
+                                                                    \nYour Buy-In will be refunded shortly`)
+                                                    .setColor('Grey');
+                                    
+                                    //edit to new embed for the betting
+                                    await embed.edit({embeds: [resultEmbed],
+                                                    components: [],
+                                                    files: [],
+                                                    });
+                                }
+                            }
+                            else if(betType === 'OVER'){
+                                if(newPlacement > average){
+                                    addWallet(userID, 200);
+                                    const resultEmbed = new EmbedBuilder()
+                                                    .setTitle('Result of Bet: Win! ✨')
+                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement} 🟩)
+                                                                    \nYou have won $200 💎`)
+                                                    .setColor('Green');
+                                    
+                                    //edit to new embed for the betting
+                                    await embed.edit({embeds: [resultEmbed],
+                                                    components: [],
+                                                    files: [],
+                                                    });
+                                }
+                                else if(newPlacement > average){
+                                    const resultEmbed = new EmbedBuilder()
+                                                    .setTitle('Result of Bet: Loss ')
+                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement} 🟥`)
+                                                    .setColor('Red');
+                                    
+                                    //edit to new embed for the betting
+                                    await embed.edit({embeds: [resultEmbed],
+                                                    components: [],
+                                                    files: [],
+                                                    });
+                                }
+                                else {
+                                    const resultEmbed = new EmbedBuilder()
+                                                    .setTitle('Result of Bet: Tie')
+                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement} ⬛)
+                                                                    \nYour Buy-In will be refunded shortly`)
+                                                    .setColor('Grey');
+                                    
+                                    //edit to new embed for the betting
+                                    await embed.edit({embeds: [resultEmbed],
+                                                    components: [],
+                                                    files: [],
+                                                    });
+
+                                    addWallet(userID, 100);
+                                }
+                            }
+                        }
+                    },600000); //10 minute = 600000
+                }                                   
+            });
             //handles the timeout
             collector.on('end', async () => {
-                
                 if(isBetting){
+                    clearInterval(pollMatches);
+
                     const betEmbed = new EmbedBuilder()
                                     .setTitle('Bet Expired')
                                     .setDescription('The match was not detected and the bet has expired')
@@ -318,6 +454,9 @@ client.on('messageCreate', async (message) => {
                                       components: [],
                                       files: [],
                                     });
+                }
+                else if(resultFound){
+                    clearInterval(pollMatches);                  
                 }
                 else{
                     const betUnder = betButton(userID, 'UNDER', true);
@@ -337,7 +476,7 @@ client.on('messageCreate', async (message) => {
             console.error(`Error Caught: ${error.message}`);
         }
     }
-    else if(cmd === '$wallet') {
+    else if(cmd === '?wallet') {
         const amount = getWallet(userID);
         message.channel.send(`You currently have $${amount} 💎`);
     }
