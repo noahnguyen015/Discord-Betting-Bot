@@ -15,7 +15,7 @@ export function getWallet(userID){
     verifyUser(userID);
 
     //gets the row for that user and return the balance or null
-    const row = db.prepare('SELECT balance FROM mywallet WHERE id = ?').get(userID);
+    const row = db.prepare('SELECT balance FROM mywallet WHERE user_id = ?').get(userID);
 
     if(!row)
         return null
@@ -28,7 +28,7 @@ export function addWallet(userID, value){
     verifyUser(userID);
     //update the amount/add to the amount of current wallet
     //.run parameters will be in place of the ?s
-    db.prepare('UPDATE mywallet SET balance = balance + ? WHERE user_id = ?').run(value, user_id);
+    db.prepare('UPDATE mywallet SET balance = balance + ? WHERE user_id = ?').run(value, userID);
 
 }
 
@@ -37,6 +37,6 @@ export function subWallet(userID, value){
 
     //update the amount/add to the amount of current wallet
     //.run parameters will be in place of the ?s
-    db.prepare('UPDATE mywallet SET balance = balance - ? WHERE id = ?').run(value, user_id);
+    db.prepare('UPDATE mywallet SET balance = balance - ? WHERE user_id = ?').run(value, userID);
 
 }

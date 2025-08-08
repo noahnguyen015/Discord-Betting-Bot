@@ -176,7 +176,8 @@ client.on('messageCreate', async (message) => {
 
                     const betEmbed = new EmbedBuilder()
                                      .setTitle('Bet is Placed!')
-                                     .setDescription(`Your Current Line: ${betType} ${average} ${line} (...)`)
+                                     .setDescription(`Your Current Line:
+                                                     ${SUMMONER_NAME}#${TAGLINE} ${betType} ${average} ${line} (...)`)
                                      .setColor('Green');
                     
                     //edit to new embed for the betting
@@ -333,7 +334,7 @@ client.on('messageCreate', async (message) => {
                             console.log(`QUEUE found, but game_type == ${game_type}`);
                             current_match = new_matches[0];
                         }
-                    },300000); //10 minute = 600000, 5 minute = 300,000
+                    },300_000); //10 minute = 600000, 5 minute = 300,000
                     
                 }
             });
@@ -448,7 +449,8 @@ client.on('messageCreate', async (message) => {
 
                     const betEmbed = new EmbedBuilder()
                                      .setTitle('Bet is Placed!')
-                                     .setDescription(`Your Current Line: ${betType} ${average} for ${line} (...)`)
+                                     .setDescription(`Your Current Line: 
+                                                     ${SUMMONER_NAME}#${TAGLINE} ${betType} ${average} for ${line} (...)`)
                                      .setColor('Purple');
                     
                     //edit to new embed for the betting
@@ -462,7 +464,7 @@ client.on('messageCreate', async (message) => {
                     //check for the data every 10 minutes
                     pollMatches = setInterval(async () => {
 
-                        console.log('Polling...');
+                        console.log('Polling for TFT matches...');
 
                         const new_matches = await getTFTMatchIDs(ACCOUNT_REGION, API_KEY, pages['puuid'], 5);
 
@@ -471,7 +473,7 @@ client.on('messageCreate', async (message) => {
 
                         if(new_matches[0] !== current_matches[0]){
 
-                            console.log("NEW MATCH IS FOUND");
+                            console.log("TFT Match Found!");
 
                             isBetting = false;
                             resultFound = true;
@@ -585,7 +587,7 @@ client.on('messageCreate', async (message) => {
                                 }
                             }
                         }
-                    },600000); //10 minute = 600000
+                    }, 420_000); //10 minute = 600_000, 7minutes = 420_000
                 }                                   
             });
             //handles the timeout

@@ -140,9 +140,9 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     }
 
     //get averages of the last 5 matches for the betting
-    const avgKills = getAverage(kills, 'lol');
-    const avgDeaths = getAverage(deaths, 'lol');
-    const avgAssists = getAverage(assists, 'lol');
+    const [avgKills, realKills] = getAverage(kills, 'lol');
+    const [avgDeaths, realDeaths] = getAverage(deaths, 'lol');
+    const [avgAssists, realAssists] = getAverage(assists, 'lol');
 
     //map of buffers
     let buffers = {};
@@ -167,7 +167,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[3]}
                                      ${descriptions[4]}
                                      \nKills Over the Last 5 Matches
-                                     BET: Over/Under ${avgKills}`)
+                                     Avg: ${realKills}
+                                     \nBET: Over/Under ${avgKills}`)
                     .setColor('Purple')
                     .setImage('attachment://kills_graph.png');
 
@@ -179,7 +180,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[3]}
                                      ${descriptions[4]}
                                      \nDeaths Over the Last 5 Matches
-                                     BET: Over/Under ${avgDeaths}`)
+                                     Avg: ${realDeaths}
+                                     \nBET: Over/Under ${avgDeaths}`)
                     .setColor('Purple')
                     .setImage('attachment://deaths_graph.png');
 
@@ -191,7 +193,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[3]}
                                      ${descriptions[4]}
                                      \nAssists Over the Last 5 Matches
-                                     BET: Over/Under ${avgAssists}`)
+                                     Avg: ${realAssists}
+                                     \nBET: Over/Under ${avgAssists}`)
                     .setColor('Purple')
                     .setImage('attachment://assists_graph.png');
 
@@ -273,7 +276,7 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
         descriptions[i] = generateTFTDescription(match_dates[i], placements[i]);
     }
 
-    const avgPlacement = getAverage(placements, "tft");
+    const [avgPlacement, realPlacement] = getAverage(placements, "tft");
 
     const betUnder = betButton(userID, 'UNDER', false);
     const betOver = betButton(userID, 'OVER', false);
@@ -291,6 +294,7 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                    .setDescription(`The placements of the last 10 matches:
                                     ${descriptions[9]}${descriptions[8]}${descriptions[7]}${descriptions[6]}${descriptions[5]}
                                     ${descriptions[4]}${descriptions[3]}${descriptions[2]}${descriptions[1]}${descriptions[0]}
+                                    \nAvg: ${realPlacement}
                                     \nBET: Over/Under ${avgPlacement}`)
                    .setColor('Purple')
                    .setImage('attachment://placement_graph.png');
@@ -410,17 +414,17 @@ function getAverage(arr, gameType){
 
     //get the actual average
     const average = sum/arr.length;
+
+    //round fraction part to 2 places
+    const rounded = average.toFixed(2);
     
     if(Number.isInteger(average)){
         if(gameType === 'lol')
             //make the line 1 - average
-            return average - 1;
+            return [average - 1, rounded];
         else if(gameType === 'tft')
-            return average + 1;
+            return [average, rounded];
     }
-
-    //round fraction part to 2 places
-    const rounded = average.toFixed(2);
 
     //trunc = remove fraction part
     const fraction = rounded - Math.trunc(rounded);
@@ -429,20 +433,20 @@ function getAverage(arr, gameType){
         //make the line a little easier to hit be removing the fraction
     if(fraction >= 0.5){
         if(gameType === 'lol')
-            return Math.trunc(rounded);
+            return [Math.trunc(rounded),rounded];
         else if(gameType === 'tft')
             //for tft, make easier by adding 1, (aka rounding up) (make under more inclusive)
-            return Math.trunc(rounded) + 1;
+            return [Math.trunc(rounded) + 1, rounded];
     
     //if the fraction is smaller, return the number - 0.5, make it half
     }
     else if(fraction < 0.5){
         if(gameType === 'lol')
-            return Math.trunc(rounded) - 0.5
+            return [Math.trunc(rounded) - 0.5, rounded]
         else if(gameType === 'tft')
             //in tft, lower = better, so add .5 to the line if there is a fraction less than 0.5 for placement (more inclusive)
-            return Math.trunc(rounded) + 0.5
+            return [Math.trunc(rounded) + 0.5, rounded]
     }
 
-    return -1
+    return [-1,-1]
 }
