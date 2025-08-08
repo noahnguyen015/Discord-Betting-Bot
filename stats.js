@@ -87,6 +87,7 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
         const matchDuration = match_stats['info']['gameDuration']; 
 
         //if the game is normal-draft, ranked solo/duo, ranked flex, and not a remake
+        //600 seconds = 10 minutes
         if((game_type === 400 || game_type === 420 || game_type === 440) && matchDuration > 600){
             if(match_participants.length === 5)
                 break;
@@ -142,8 +143,6 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     const avgKills = getAverage(kills, 'lol');
     const avgDeaths = getAverage(deaths, 'lol');
     const avgAssists = getAverage(assists, 'lol');
-
-    console.log(`${avgKills}/${avgDeaths}/${avgAssists}`);
 
     //map of buffers
     let buffers = {};
