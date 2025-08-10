@@ -48,13 +48,24 @@ export const makeButtons = (isDisabled, pageNum, userID) => {
     return [button1, button2]
 }
 
-export function betButton(userID, betType, isDisabled){
+export function betButton(userID, betType, isDisabled, betAmount, isSuper){
 
-    const bet_button = new ButtonBuilder()
-        .setCustomId(`Bet+${userID}+${betType}`)
-        .setLabel(betType === 'UNDER'? `Bet Under 🔽 (100💎)`: `Bet Over 🔼 (100💎)`)
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(isDisabled);
+    let bet_button;
+
+    if(isSuper){
+        bet_button = new ButtonBuilder()
+            .setCustomId(`Bet+${userID}+${betType}`)
+            .setLabel(`🔥 ${betType} BET: (${betAmount}💎)`)
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(isDisabled);
+    }
+    else{
+        bet_button = new ButtonBuilder()
+            .setCustomId(`Bet+${userID}+${betType}`)
+            .setLabel(betType === 'UNDER'? `Bet Under 🔽 (${betAmount}💎)`: `Bet Over 🔼 (${betAmount}💎)`)
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(isDisabled);
+    }
 
     return bet_button
 }
@@ -144,6 +155,16 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     const [avgDeaths, realDeaths] = getAverage(deaths, 'lol');
     const [avgAssists, realAssists] = getAverage(assists, 'lol');
 
+    //add/sub to lines to make them harder to hit
+    const superKills = avgKills + 4;
+    let superDeaths = avgDeaths - 3;
+
+    if(superDeaths <= 1){
+        superDeaths = 1;
+    }
+
+    const superAssists = avgAssists + 5;
+
     //map of buffers
     let buffers = {};
 
@@ -168,7 +189,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[4]}
                                      \nKills Over the Last 5 Matches
                                      Avg: ${realKills}
-                                     \nBET: Over/Under ${avgKills}`)
+                                     \nBET: Over/Under ${avgKills}
+                                     🔥 SUPER BET: Over ${superKills} 🔥`)
                     .setColor('Purple')
                     .setImage('attachment://kills_graph.png');
 
@@ -181,7 +203,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[4]}
                                      \nDeaths Over the Last 5 Matches
                                      Avg: ${realDeaths}
-                                     \nBET: Over/Under ${avgDeaths}`)
+                                     \nBET: Over/Under ${avgDeaths}
+                                     🔥 SUPER BET: Under ${superDeaths} 🔥`)
                     .setColor('Purple')
                     .setImage('attachment://deaths_graph.png');
 
@@ -194,7 +217,8 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                      ${descriptions[4]}
                                      \nAssists Over the Last 5 Matches
                                      Avg: ${realAssists}
-                                     \nBET: Over/Under ${avgAssists}`)
+                                     \nBET: Over/Under ${avgAssists}
+                                     🔥 SUPER BET: Over ${superAssists} 🔥`)
                     .setColor('Purple')
                     .setImage('attachment://assists_graph.png');
 
@@ -209,12 +233,34 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
     
     //buttons for previous and next
     const [prev, next] = makeButtons(false, 0, userID);
-    const betUnder = betButton(userID, 'UNDER', false);
-    const betOver = betButton(userID, 'OVER', false);
+    
+    const betAmount = 200;
+    const superAmount = 500;
+
+    let betUnder;
+    let betOver; 
+    let superBet;
+
+    //check current balance of the user
+    const currentBalance = getWallet(userID);
+
+    if(currentBalance >= betAmount){
+        betUnder = betButton(userID, 'UNDER', false, 200, false);
+        betOver = betButton(userID, 'OVER', false, 200, false);
+    }else{
+        betUnder = betButton(userID, 'UNDER', true, 200, false);
+        betOver = betButton(userID, 'OVER', true, 200, false);
+    }
+
+    if(currentBalance >= superAmount){
+        superBet = betButton(userID, 'SUPER', false, 500, true);
+    }else{
+        superBet = betButton(userID, 'SUPER', true, 500, true);        
+    }
     
     //create row for these actions
     const buttons = new ActionRowBuilder().addComponents(prev, next);
-    const bet_row = new ActionRowBuilder().addComponents(betUnder, betOver);
+    const bet_row = new ActionRowBuilder().addComponents(betUnder, betOver, superBet);
     
     //pass array of pages, buttons, and array of attachments
     //Check for easter egg
@@ -224,7 +270,7 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                 attachments: [k_attachment, d_attachment, a_attachment], 
                 puuid: puuid,
                 match_ids: match_ids, 
-                average: {kills: avgKills, deaths: avgDeaths, assists: avgAssists},
+                average: {kills: avgKills, deaths: avgDeaths, assists: avgAssists}, super_avgs: {kills: superKills, deaths: superDeaths, assists: superAssists},
                 easteregg: checkEE1}
     }
 
@@ -233,7 +279,7 @@ export async function getLOLStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
             attachments: [k_attachment, d_attachment, a_attachment], 
             puuid: puuid,
             match_ids: match_ids,
-            average: {kills: avgKills, deaths: avgDeaths, assists: avgAssists},
+            average: {kills: avgKills, deaths: avgDeaths, assists: avgAssists}, super_avgs: {kills: superKills, deaths: superDeaths, assists: superAssists},
             }
 }
 
@@ -278,16 +324,40 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
 
     const [avgPlacement, realPlacement] = getAverage(placements, "tft");
 
-    const betUnder = betButton(userID, 'UNDER', false);
-    const betOver = betButton(userID, 'OVER', false);
+    let superPlacement = avgPlacement - 2;
 
-    const bet_row = new ActionRowBuilder().addComponents(betUnder, betOver);
+    if(superPlacement <= 1){
+        superPlacement = 1.5;
+    }
+
+    const betAmount = 200;
+    const superAmount = 500;
+    const currentBalance = getWallet(userID);
+    let betUnder;
+    let betOver; 
+    let superBet;
+
+    if(currentBalance >= betAmount){
+        betUnder = betButton(userID, 'UNDER', false, 200, false);
+        betOver = betButton(userID, 'OVER', false, 200, false);
+    }else{
+        betUnder = betButton(userID, 'UNDER', true, 200, false);
+        betOver = betButton(userID, 'OVER', true, 200, false);
+    }
+
+    if(currentBalance >= superAmount){
+        superBet = betButton(userID, 'SUPER', false, 500, true);
+    }else{
+        superBet = betButton(userID, 'SUPER', true, 500, true);        
+    }
+
+
+    const bet_row = new ActionRowBuilder().addComponents(betUnder, betOver, superBet);
 
     //generate buffer for the TFT graph
     const buffer = await graphTFTData(placements, match_dates, 'Placement', avgPlacement);
     //create attachment for embed files
     const attachment = new AttachmentBuilder(buffer, {name: 'placement_graph.png'})
-
 
     const embed1 = new EmbedBuilder()
                    .setTitle('TFT Placements')
@@ -295,7 +365,8 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                                     ${descriptions[9]}${descriptions[8]}${descriptions[7]}${descriptions[6]}${descriptions[5]}
                                     ${descriptions[4]}${descriptions[3]}${descriptions[2]}${descriptions[1]}${descriptions[0]}
                                     \nAvg: ${realPlacement}
-                                    \nBET: Over/Under ${avgPlacement}`)
+                                    \nBET: Over/Under ${avgPlacement}
+                                    🔥 SUPER BET: Under ${superPlacement} 🔥`)
                    .setColor('Purple')
                    .setImage('attachment://placement_graph.png');
 
@@ -308,7 +379,7 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
                 attachment: attachment,
                 puuid: puuid,
                 match_ids: match_ids,
-                average: avgPlacement, 
+                average: avgPlacement, super_avgs: {placement: superPlacement},
                 easteregg: EECheck1};
 
     return {embed: embed1, 
@@ -316,7 +387,7 @@ export async function getTFTStats(SUMMONER_NAME, TAGLINE, ACCOUNT_REGION, REGION
             attachment: attachment,
             puuid: puuid,
             match_ids: match_ids,
-            average: avgPlacement,};
+            average: avgPlacement, super_avgs: {placement: superPlacement},};
 }
 
 export function generateLOLDescription(kills, deaths, assists, matchDate, champion){
@@ -402,6 +473,7 @@ function getEasterEgg(SUMMONER_NAME, TAGLINE, embed){
 }
 
 //get the averages over the last couples of games
+//averages as calculated to be slightly easier than the true average
 //Basic idea: make lines slightly better than average
     //Done by subtracting for league lines, adding for tft lines
 function getAverage(arr, gameType){
