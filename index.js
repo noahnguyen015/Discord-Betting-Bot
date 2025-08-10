@@ -388,7 +388,9 @@ client.on('messageCreate', async (message) => {
                                         addWallet(userID, 200);
                                     }
                                 }
-                            }else if(betType === 'SUPER'){
+                                else if(betType === 'SUPER'){
+
+                                console.log('jumped in SUPER!');
 
                                 let chosenEmbed;
 
@@ -430,7 +432,6 @@ client.on('messageCreate', async (message) => {
                                     }
                                 }
                                 else {
-
                                     let superLine;
                                     //choose the line based on stat chosen
                                     if(line === 'Kills' || line === 'Assists'){
@@ -453,6 +454,7 @@ client.on('messageCreate', async (message) => {
                                                 components: [],
                                                 files: [],
                                                 });
+                                }
                             }
                             //if not, set the last match to the current one, so it continues to check for new matches (doesn't check same one each time)
                             else{
@@ -752,7 +754,7 @@ client.on('messageCreate', async (message) => {
                                 else if(newPlacement > average){
                                     const resultEmbed = new EmbedBuilder()
                                                     .setTitle('Result of Bet: Loss ')
-                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement}) 🟥`)
+                                                    .setDescription(`Your Current Line: UNDER ${average} for ${line} Result: (${newPlacement}) 🟥`)
                                                     .setColor('Red');
                                     
                                     //edit to new embed for the betting
