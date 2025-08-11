@@ -179,11 +179,11 @@ client.on('messageCreate', async (message) => {
                     //check the type of bet
                     if(interaction.customId === `Bet+${interaction.user.id}+UNDER`){
                         betType = 'UNDER';  
-                        subWallet(userID, 100);
+                        subWallet(userID, 200);
                     }
                     else if(interaction.customId === `Bet+${interaction.user.id}+OVER`){
                         betType = 'OVER';
-                        subWallet(userID, 100);
+                        subWallet(userID, 200);
                     }
                     else{
                         betType = 'SUPER';
@@ -653,7 +653,7 @@ client.on('messageCreate', async (message) => {
                                                     .setTitle('Result of Bet: Win! ✨')
                                                     .setDescription(`Your Current Line: 
                                                                     ${SUMMONER_NAME}#${TAGLINE} ${betType} ${average} for ${line} Result: (${newPlacement}) 🟩
-                                                                    \nYou have won $200 💎`)
+                                                                    \nYou have won $400 💎`)
                                                     .setColor('Green');
                                     
                                     //edit to new embed for the betting
@@ -697,7 +697,7 @@ client.on('messageCreate', async (message) => {
                                     const resultEmbed = new EmbedBuilder()
                                                     .setTitle('Result of Bet: Win! ✨')
                                                     .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement}) 🟩
-                                                                    \nYou have won $200 💎`)
+                                                                    \nYou have won $400 💎`)
                                                     .setColor('Green');
                                     
                                     //edit to new embed for the betting
