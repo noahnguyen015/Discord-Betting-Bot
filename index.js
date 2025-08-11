@@ -194,19 +194,19 @@ client.on('messageCreate', async (message) => {
                     //super bets are applied if super button is chosen
                     if(currentPage === 0){
                         line = 'Kills';
-                        if(betType = 'SUPER')
+                        if(betType === 'SUPER')
                             average = pages['super_avgs']['kills'];
                         else
                             average = pages['average']['kills'];
                     }else if(currentPage === 1){
                         line = 'Deaths';
-                        if(betType = 'SUPER')
+                        if(betType === 'SUPER')
                             average = pages['super_avgs']['deaths'];
                         else
                             average = pages['average']['deaths'];
                     }else if(currentPage === 2){
                         line = 'Assists';
-                        if(betType = 'SUPER')
+                        if(betType === 'SUPER')
                             average = pages['super_avgs']['assists'];
                         else
                             average = pages['average']['assists'];
@@ -390,64 +390,64 @@ client.on('messageCreate', async (message) => {
                                 }
                                 else if(betType === 'SUPER'){
 
-                                console.log('jumped in SUPER!');
+                                    console.log('jumped in SUPER!');
 
-                                let chosenEmbed;
+                                    let chosenEmbed;
 
-                                if(newStats[line] > average){
+                                    if(newStats[line] > average){
 
-                                    if(line === 'Kills' || line === 'Assists'){
+                                        if(line === 'Kills' || line === 'Assists'){
+                                            chosenEmbed = new EmbedBuilder()
+                                                            .setTitle('Result of Bet: MAX Win! 😎🔥')
+                                                            .setDescription(`Your Current Line: 
+                                                                        ${SUMMONER_NAME}#${TAGLINE} OVER ${average} for ${line} Result: (${newStats[line]}) 🟩
+                                                                        \nYou have won $1250 💎`)
+                                                            .setColor('Green');
+                                            addWallet(userID, 1250);
+                                        }
+                                        else if(line === 'Deaths'){
+                                            chosenEmbed = new EmbedBuilder()
+                                                            .setTitle('Result of Bet: Loss ')
+                                                            .setDescription(`Your Current Line: 
+                                                                            ${SUMMONER_NAME}#${TAGLINE} UNDER ${average} for ${line} Result: (${newStats[line]}) 🟥`)
+                                                            .setColor('Red');
+                                        }     
+                                    }
+                                    else if(newStats[line] < average){
+                                        if(line === 'Kills' || line === 'Assists'){
+                                            chosenEmbed = new EmbedBuilder()
+                                                            .setTitle('Result of Bet: Loss ')
+                                                            .setDescription(`Your Current Line: 
+                                                                            ${SUMMONER_NAME}#${TAGLINE} OVER ${average} for ${line} Result: (${newStats[line]}) 🟥`)
+                                                            .setColor('Red');
+                                        }
+                                        else if(line === 'Deaths'){
+                                            chosenEmbed = new EmbedBuilder()
+                                                            .setTitle('Result of Bet: Win! ✨')
+                                                            .setDescription(`Your Current Line: 
+                                                                        ${SUMMONER_NAME}#${TAGLINE} UNDER ${average} for ${line} Result: (${newStats[line]}) 🟩
+                                                                        \nYou have won $1250 💎`)
+                                                            .setColor('Green');
+                                            addWallet(userID, 1250);
+                                        }
+                                    }
+                                    else {
+                                        let superLine;
+                                        //choose the line based on stat chosen
+                                        if(line === 'Kills' || line === 'Assists'){
+                                            superLine = 'OVER';
+                                        }
+                                        else if(line === 'DEATHS'){
+                                            superLine = 'UNDER';
+                                        }
                                         chosenEmbed = new EmbedBuilder()
-                                                        .setTitle('Result of Bet: MAX Win! 😎🔥')
+                                                        .setTitle('Result of Bet: Tie')
                                                         .setDescription(`Your Current Line: 
-                                                                    ${SUMMONER_NAME}#${TAGLINE} OVER ${average} for ${line} Result: (${newStats[line]}) 🟩
-                                                                    \nYou have won $1250 💎`)
-                                                        .setColor('Green');
-                                        addWallet(userID, 1250);
+                                                                        ${SUMMONER_NAME}#${TAGLINE} ${superLine} ${average} for ${line} Result: (${newStats[line]}) ⬛
+                                                                        \nYour Buy-In will be refunded shortly`)
+                                                        .setColor('Grey');                                    
+                                        addWallet(userID, 500);
                                     }
-                                    else if(line === 'Deaths'){
-                                        chosenEmbed = new EmbedBuilder()
-                                                        .setTitle('Result of Bet: Loss ')
-                                                        .setDescription(`Your Current Line: 
-                                                                        ${SUMMONER_NAME}#${TAGLINE} UNDER ${average} for ${line} Result: (${newStats[line]}) 🟥`)
-                                                        .setColor('Red');
-                                    }     
-                                }
-                                else if(newStats[line] < average){
-                                    if(line === 'Kills' || line === 'Assists'){
-                                        chosenEmbed = new EmbedBuilder()
-                                                        .setTitle('Result of Bet: Loss ')
-                                                        .setDescription(`Your Current Line: 
-                                                                        ${SUMMONER_NAME}#${TAGLINE} OVER ${average} for ${line} Result: (${newStats[line]}) 🟥`)
-                                                        .setColor('Red');
-                                    }
-                                    else if(line === 'Deaths'){
-                                        chosenEmbed = new EmbedBuilder()
-                                                        .setTitle('Result of Bet: Win! ✨')
-                                                        .setDescription(`Your Current Line: 
-                                                                    ${SUMMONER_NAME}#${TAGLINE} UNDER ${average} for ${line} Result: (${newStats[line]}) 🟩
-                                                                    \nYou have won $1250 💎`)
-                                                        .setColor('Green');
-                                        addWallet(userID, 1250);
-                                    }
-                                }
-                                else {
-                                    let superLine;
-                                    //choose the line based on stat chosen
-                                    if(line === 'Kills' || line === 'Assists'){
-                                        superLine = 'OVER'
-                                    }
-                                    else if(line === 'DEATHS'){
-                                        superLine = 'UNDER'
-                                    }
-                                    chosenEmbed = new EmbedBuilder()
-                                                    .setTitle('Result of Bet: Tie')
-                                                    .setDescription(`Your Current Line: 
-                                                                    ${SUMMONER_NAME}#${TAGLINE} ${superLine} ${average} for ${line} Result: (${newStats[line]}) ⬛
-                                                                    \nYour Buy-In will be refunded shortly`)
-                                                    .setColor('Grey');                                    
-                                    addWallet(userID, 500);
-                                }
 
                                 //edit to new embed for the betting, chosenEmbed will be the resulting message based on the line :)
                                 await embed.edit({embeds: [chosenEmbed],
@@ -708,7 +708,7 @@ client.on('messageCreate', async (message) => {
 
                                     addWallet(userID, 400);
                                 }
-                                else if(newPlacement > average){
+                                else if(newPlacement < average){
                                     const resultEmbed = new EmbedBuilder()
                                                     .setTitle('Result of Bet: Loss ')
                                                     .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement}) 🟥`)
