@@ -2,8 +2,9 @@
 
 ### Discord bot used to bet on friends or teammates to earn diamonds 💎
 
-- Discord API key and Riot API required to run bot
-- Built application using Javascript (node.js, discord.js) with the Riot API
+- Discord API key and Riot API key required to run bot
+- Built application using Javascript (node.js, discord.js)
+- Capturing post game stats using the Riot API 
 
 
 ![gamba_ex1](https://github.com/user-attachments/assets/17405473-990c-4b4a-aa0e-a1094fa1b8a5)
