@@ -696,7 +696,8 @@ client.on('messageCreate', async (message) => {
                                 if(newPlacement > average){
                                     const resultEmbed = new EmbedBuilder()
                                                     .setTitle('Result of Bet: Win! ✨')
-                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement}) 🟩
+                                                    .setDescription(`Your Current Line: 
+                                                                    ${SUMMONER_NAME}#${TAGLINE} ${betType} ${average} for ${line} Result: (${newPlacement}) 🟩
                                                                     \nYou have won $400 💎`)
                                                     .setColor('Green');
                                     
@@ -711,7 +712,8 @@ client.on('messageCreate', async (message) => {
                                 else if(newPlacement < average){
                                     const resultEmbed = new EmbedBuilder()
                                                     .setTitle('Result of Bet: Loss ')
-                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement}) 🟥`)
+                                                    .setDescription(`Your Current Line: 
+                                                                    ${SUMMONER_NAME}#${TAGLINE} ${betType} ${average} for ${line} Result: (${newPlacement}) 🟥`)
                                                     .setColor('Red');
                                     
                                     //edit to new embed for the betting
@@ -723,7 +725,8 @@ client.on('messageCreate', async (message) => {
                                 else {
                                     const resultEmbed = new EmbedBuilder()
                                                     .setTitle('Result of Bet: Tie')
-                                                    .setDescription(`Your Current Line: ${betType} ${average} for ${line} Result: (${newPlacement}) ⬛
+                                                    .setDescription(`Your Current Line: 
+                                                                    ${SUMMONER_NAME}#${TAGLINE} ${betType} ${average} for ${line} Result: (${newPlacement}) ⬛
                                                                     \nYour Buy-In will be refunded shortly`)
                                                     .setColor('Grey');
                                     
@@ -740,7 +743,8 @@ client.on('messageCreate', async (message) => {
                                 if(newPlacement < average){
                                     const resultEmbed = new EmbedBuilder()
                                                     .setTitle('Result of Bet: MAX Win! 🔥😎')
-                                                    .setDescription(`Your Current Line: UNDER ${average} for ${line} Result: (${newPlacement}) 🟩
+                                                    .setDescription(`Your Current Line:
+                                                                     ${SUMMONER_NAME}#${TAGLINE} UNDER ${average} for ${line} Result: (${newPlacement}) 🟩
                                                                     \nYou have won $1250 💎`)
                                                     .setColor('Green');
                                     addWallet(userID, 1250);
@@ -754,7 +758,8 @@ client.on('messageCreate', async (message) => {
                                 else if(newPlacement > average){
                                     const resultEmbed = new EmbedBuilder()
                                                     .setTitle('Result of Bet: Loss ')
-                                                    .setDescription(`Your Current Line: UNDER ${average} for ${line} Result: (${newPlacement}) 🟥`)
+                                                    .setDescription(`Your Current Line: 
+                                                                    ${SUMMONER_NAME}#${TAGLINE} UNDER ${average} for ${line} Result: (${newPlacement}) 🟥`)
                                                     .setColor('Red');
                                     
                                     //edit to new embed for the betting
@@ -765,7 +770,8 @@ client.on('messageCreate', async (message) => {
                                 }else{
                                     const resultEmbed = new EmbedBuilder()
                                                     .setTitle('Result of Bet: Tie')
-                                                    .setDescription(`Your Current Line: UNDER ${average} for ${line} Result: (${newPlacement}) ⬛
+                                                    .setDescription(`Your Current Line: 
+                                                                    ${SUMMONER_NAME}#${TAGLINE} UNDER ${average} for ${line} Result: (${newPlacement}) ⬛
                                                                     \nYour Buy-In will be refunded shortly`)
                                                     .setColor('Grey');  
 
