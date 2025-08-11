@@ -10,4 +10,6 @@
 
 ![gamba_ex2](https://github.com/user-attachments/assets/16c7c73a-6c5e-45b8-b4af-a3467ead995b)
 
+![gamba_ex4](https://github.com/user-attachments/assets/92517b2c-c2df-4207-a73e-33685effbf9b)
+
 ![gamba_ex3](https://github.com/user-attachments/assets/bfcc04a4-c446-4db5-9afd-2b18379a5ba5)
