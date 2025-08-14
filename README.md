@@ -1,6 +1,6 @@
-# Chimbada: Discord Betting Bot for League of Legends and Teamfight Tactics
+# Chimbotta: Discord Betting Bot for League of Legends and Teamfight Tactics
 
-### Discord bot used to bet on friends or teammates to earn diamonds 💎
+### Discord bot used to bet on friends or teammates to earn virtual balance 💎
 
 - Discord API key and Riot API key required to run bot
 - Built application using Javascript (node.js, discord.js)
